@@ -12,7 +12,7 @@ import torch.utils.data
 def imread(path, mask=False):
     '''Open an image as a numpy array.
 
-    Masks are opened as binary image with shape (N x M).
+    Masks are opened as binary images with shape (N x M).
     Otherwise, images are opened as float RGB with shape (N x M x 3).
     '''
     path = str(path)
@@ -29,15 +29,15 @@ def imread(path, mask=False):
 def background_mask(img):
     '''Create a mask separating the background from the foreground.
     '''
-    # nuclei where red is low
+    # assume nuclei are where red is low
     red = img[:,:,0]
-    b_mask = (red > 0.3).astype('float32')
+    b_mask = (red > 0.3).astype('uint8')
 
     # block out areas that likely contain nuclei
     k = np.ones((50, 50))
     b_mask = cv2.erode(b_mask, k)
 
-    return b_mask
+    return b_mask.astype('bool')
 
 
 def edge_mask(p_mask):
@@ -45,9 +45,9 @@ def edge_mask(p_mask):
     '''
     k = np.ones((3,3))
     p_mask = p_mask.astype('uint8')
-    edges = cv2.dilate(p_mask, k)
-    edges = edges - p_mask
-    return edges.astype('bool')
+    e_mask = cv2.dilate(p_mask, k)
+    e_mask = e_mask - p_mask
+    return e_mask.astype('bool')
 
 
 def sample_from_mask(img, mask, size, max_count=None, random=False):
@@ -180,26 +180,35 @@ class NucleiDataset(torch.utils.data.Dataset):
     def __getitem__(self, i):
         i -= self._split
         if i < 0:
-            return self._pos[i], 1
+            return self._pos[i], np.float32(1)
         else:
-            return self._neg[i], 0
+            return self._neg[i], np.float32(0)
 
 
 class NucleiSegmentation:
     '''A dataloader for the nuclei segmentation dataset.
     '''
-
-    def __init__(self, root='./nuclei', n_folds=5):
+    def __init__(self, root='./nuclei', n_folds=5, **kwargs):
         '''Create a dataloader.
 
         Args:
-            root (path): The root directory.
-            n_folds (int): The number of cross-validation folds.
+            root (path):
+                The directory containing the data.
+            n_folds (int):
+                The number of cross-validation folds.
+
+        Kwargs:
+            size (int, default=64):
+                The size of the image patches.
+            edge_ratio (default=1):
+                The ratio of negative edge examples to positive examples.
+            bg_ratio (default=0.3)
+                The ratio of negative background examples to positive examples.
         '''
         root = Path(root)
         originals = sorted(root.glob('*_original.tif'))
         masks = sorted(root.glob('*_mask.png'))
-        folds = create_cv(root, n_folds)
+        folds = create_cv(root, n_folds, **kwargs)
         self.datasets = [NucleiDataset(f['pos'], f['neg']) for f in folds]
         self._n_folds = n_folds
 
@@ -207,7 +216,7 @@ class NucleiSegmentation:
         '''Loads the training set for the given fold.
 
         The returned value is a torch `DataLoader` that iterates over batches
-        of (patch, label) pairs. The kwargs are forwarded to `DataLoader`.
+        of the form `(x, y)`. The kwargs are forwarded to the `DataLoader`.
 
         Some kwargs defaults have been overridden:
             - `batch_size` defaults to 32.
@@ -228,7 +237,7 @@ class NucleiSegmentation:
         '''Loads the test set for the given fold.
 
         The returned value is a torch `DataLoader` that iterates over batches
-        of (patch, label) pairs. The kwargs are forwarded to `DataLoader`.
+        of the form `(x, y)`. The kwargs are forwarded to the `DataLoader`.
 
         Some kwargs defaults have been overridden:
             - `batch_size` defaults to 32.
