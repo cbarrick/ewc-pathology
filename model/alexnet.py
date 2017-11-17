@@ -12,19 +12,19 @@ class AlexNet(N.Module):
     def __init__(self, num_classes=1000):
         super(AlexNet, self).__init__()
         self.features = N.Sequential(
-            N.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            N.Conv2d(3, 64, kernel_size=11, stride=4, padding=1),
             N.ReLU(inplace=True),
-            #N.MaxPool2d(kernel_size=3, stride=2),
-            N.Conv2d(64, 192, kernel_size=5, padding=2),
+            N.MaxPool2d(kernel_size=3, stride=2),
+            N.Conv2d(64, 192, kernel_size=5, padding=1),
             N.ReLU(inplace=True),
-            #N.MaxPool2d(kernel_size=3, stride=2),
+            N.MaxPool2d(kernel_size=3, stride=2),
             N.Conv2d(192, 384, kernel_size=3, padding=1),
             N.ReLU(inplace=True),
             N.Conv2d(384, 256, kernel_size=3, padding=1),
             N.ReLU(inplace=True),
             N.Conv2d(256, 256, kernel_size=3, padding=1),
             N.ReLU(inplace=True),
-            #N.MaxPool2d(kernel_size=3, stride=2),
+            N.MaxPool2d(kernel_size=3, stride=2),
         )
         self.classifier = N.Sequential(
             N.Dropout(),
@@ -47,11 +47,10 @@ class AlexNet(N.Module):
         return x
 
     def partial_fit(self,X,y):
-        X=A.Variable(torch.from_numpy(X))
-        y=A.Variable(torch.from_numpy(y))
-        out=self.forward(X.float())
-        loss=self.lossfn(out,y.long())
+        out=self.forward(X)
+        loss=self.lossfn(out,y)
         logger.info("Loss: {}".format(loss.data[0]))
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         return loss.data[0]
