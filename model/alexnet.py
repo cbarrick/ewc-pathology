@@ -54,3 +54,4 @@ class AlexNet(N.Module):
         logger.info("Loss: {}".format(loss.data[0]))
         loss.backward()
         self.optimizer.step()
+        return loss.data[0]
