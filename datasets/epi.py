@@ -110,7 +110,7 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     return pos, neg
 
 
-def create_cv(root, k=5, n=10000, **kwargs):
+def create_cv(k=5, n=10000, **kwargs):
     data_dir = get_data()
     masks = sorted(data_dir.glob('masks/*_mask.png'))
     images = [data_dir / f'{m.stem[:-5]}.tif' for m in masks]
