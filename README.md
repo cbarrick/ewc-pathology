@@ -11,9 +11,9 @@ Classes for loading the data can be found in the `datasets` package. These class
 
 #### Example
 ```python
-from datasets import NucleiSegmentation
+from datasets import NucleiLoader
 
-data = datasets.NucleiSegmentation('./nuclei')
+data = datasets.NucleiLoader()
 model = MySuperAwesomeClassifier()
 
 for epoch in range(100):

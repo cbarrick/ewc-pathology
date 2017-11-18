@@ -1,1 +1,2 @@
-from .nuclei import NucleiSegmentation
+from .nuclei import NucleiLoader
+from .epi import EpitheliumLoader
