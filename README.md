@@ -7,13 +7,13 @@ Data Science II Term Project
 ### Downloading and using the datasets
 All of the datasets can be downloaded [here][datasets].
 
-Classes for loading the data can be found in the `datasets` package. These classes all take a path to the data folder and a number of folds for cross-validation in their constructor. The resulting data loader objects expose two methods, `load_train(i)` and `load_test(i)` where `i` is the index of one of the folds. The value returned is an iterator over tuples `(x, y)` where `x` is a batch of image patches and `y` are the corresponding labels.
+Classes for loading the data can be found in the `datasets` package. The resulting data access objects expose two methods, `load_train(i)` and `load_test(i)` where `i` is the index of one of the folds. The value returned is an iterator over tuples `(x, y)` where `x` is a batch of image patches and `y` are the corresponding labels.
 
 #### Example
 ```python
-from datasets import NucleiSegmentation
+from datasets import NucleiLoader
 
-data = datasets.NucleiSegmentation('./nuclei')
+data = datasets.NucleiLoader()
 model = MySuperAwesomeClassifier()
 
 for epoch in range(100):
