@@ -45,13 +45,13 @@ def get_metadata(image_path):
 def imread(path, mask=False):
     path = str(path)
     if mask:
-        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        img = img.astype('bool')
+        image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        image = image.astype('bool')
     else:
-        img = cv2.imread(path, cv2.IMREAD_COLOR)
-        img = img[:, :, [2,1,0]] # BGR to RGB
-        img = img.astype('float32') / 255
-    return img
+        image = cv2.imread(path, cv2.IMREAD_COLOR)
+        image = image[:, :, [2,1,0]] # BGR to RGB
+        image = image.astype('float32') / 255
+    return image
 
 
 def extract_from_mask(image, mask, max_count=None, size=64, random=True):
@@ -117,10 +117,10 @@ def create_cv(path, k=5, n=10000, **kwargs):
 
     folds = [{'pos':[], 'neg':[]} for _ in range(k)]
 
-    for i, (img_path, mask_path) in enumerate(zip(images, masks)):
-        image = imread(img_path)
+    for i, (image_path, mask_path) in enumerate(zip(images, masks)):
+        image = imread(image_path)
         mask_p = imread(mask_path, mask=True)
-        meta = get_metadata(img_path)
+        meta = get_metadata(image_path)
         pos, neg = extract_patches(image, mask_p, n, **kwargs)
         f = hash(meta['patient']) % k
         folds[f]['pos'].extend(pos)
