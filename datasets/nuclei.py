@@ -12,11 +12,11 @@ import torch
 import torch.utils.data
 
 
-def get_data(force_download=False):
+def get_data(path='./data/nuclei', force_download=False):
     '''Download the data and return a Path to the directory.'''
     src = 'http://andrewjanowczyk.com/wp-static/nuclei.tgz'
     arc = Path('./nuclei.tgz')
-    dst = Path('./data/nuclei')
+    dst = Path(path)
 
     if dst.exists() and not force_download:
         return dst
@@ -150,7 +150,7 @@ def get_metadata(image_path):
     }
 
 
-def create_cv(k=5, n=10000, **kwargs):
+def create_cv(path, k=5, n=10000, **kwargs):
     '''Extract a training set of patches taken from all images in a directory.
 
     The dataset is folded for cross-validation by patient id.
@@ -161,7 +161,7 @@ def create_cv(k=5, n=10000, **kwargs):
 
     Kwargs are passed to `extract_patches`.
     '''
-    data_dir = get_data()
+    data_dir = get_data(path)
     masks = sorted(data_dir.glob('*_mask.png'))
     images = sorted(data_dir.glob('*_original.tif'))
 
@@ -201,10 +201,12 @@ class NucleiDataset(torch.utils.data.Dataset):
 class NucleiLoader:
     '''A dataloader for the nuclei segmentation dataset.
     '''
-    def __init__(self, k=5, n=10000, **kwargs):
+    def __init__(self, path='./data/nuclei', k=5, n=10000, **kwargs):
         '''Create a dataloader.
 
         Args:
+            path (str):
+                The path to the dataset.
             k (int):
                 The number of cross-validation folds.
             n (int):
@@ -224,7 +226,7 @@ class NucleiLoader:
                 The dataset will contain `n * bg_ratio`
                 negative background patches per source image.
         '''
-        folds = create_cv(k, **kwargs)
+        folds = create_cv(path, k, **kwargs)
         self.datasets = [NucleiDataset(f['pos'], f['neg']) for f in folds]
 
     def load_train(self, fold, **kwargs):
