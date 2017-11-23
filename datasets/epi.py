@@ -119,9 +119,9 @@ def create_cv(k=5, n=10000, **kwargs):
 
     for i, (img_path, mask_path) in enumerate(zip(images, masks)):
         image = imread(img_path)
-        p_mask = imread(mask_path, mask=True)
+        mask_p = imread(mask_path, mask=True)
         meta = get_metadata(img_path)
-        pos, neg = extract_patches(image, p_mask, n, **kwargs)
+        pos, neg = extract_patches(image, mask_p, n, **kwargs)
         f = hash(meta['patient']) % k
         folds[f]['pos'].extend(pos)
         folds[f]['neg'].extend(neg)
