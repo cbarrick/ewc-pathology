@@ -45,7 +45,7 @@ if __name__ == "__main__":
 		for x, y in data_nuclei.load_train(0, batch_size = 100):
 			sample_data = x.clone(), y.clone()
 			trainer.partial_fit("Task1 -AD HOC TASK" ,x ,y)
-			break;
+
 
 
 	trainer.train_on_task_consolidate("CONSLIDATE WEIGHTS", sample_data[0], sample_data[1])
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
 		for x, y in data_epi.load_train(0, batch_size = 100):
 			trainer.partial_fit("TASK-MAIN EWC TESTING TASK", x, y)
-			break;
+
 
 
 
@@ -65,13 +65,12 @@ if __name__ == "__main__":
 	for x,y in data_nuclei.load_test(0, batch_size = 100):
 		y_pred_task_1.extend(trainer.predict(x))
 		y_orig_task_1.extend(y)
-		break;
+
 
 
 	for x,y in data_epi.load_test(0, batch_size = 100):
 		y_pred_task_2.extend(trainer.predict(x))
 		y_orig_task_2.extend(y)
-		break;
 
 
 
