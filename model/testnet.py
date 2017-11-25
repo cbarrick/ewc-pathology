@@ -17,9 +17,9 @@ class AlexNet(N.Module):
         self.mean={}
         self.__CONSOLIDATED=0
         self.features = N.Sequential(
-            N.Conv2d(1, 3, kernel_size=3, stride=1, padding=1),
+            N.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             N.ReLU(inplace=True),
-            #N.MaxPool2d(kernel_size=3, stride=2)
+            N.MaxPool2d(kernel_size=3, stride=2),
             N.Conv2d(3,3,kernel_size=5,stride=1,padding=2),
             N.ReLU(inplace=True),
             N.MaxPool2d(kernel_size=3,stride=2)
