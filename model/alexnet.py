@@ -3,7 +3,6 @@ import torch.nn as N
 import torch.nn.functional as F
 import torch.optim as O
 import torch.autograd as A
-import torchvision.models as Models
 import logging
 
 logger=logging.getLogger(__name__)
@@ -87,4 +86,3 @@ class AlexNet(N.Module):
             self.fisher[name]=(derivatives[i].data.clone()**2)/size
             self.mean[name]=param.data.clone()
         self.__CONSOLIDATED=1
- 
