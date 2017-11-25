@@ -2,11 +2,11 @@
 import argparse
 from model import  alexnet
 import numpy
-from ewctrainer.Score import Score
 
 from datasets.nuclei import NucleiLoader
 from datasets.epi import EpitheliumLoader
-from ewctrainer.Trainer import Trainer
+from ewc.trainer import Trainer
+from ewc.scores import Score
 
 import logging
 
