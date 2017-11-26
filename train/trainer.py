@@ -49,7 +49,7 @@ class EWCTrainer:
         '''
         x = A.Variable(x, **kwargs)
         if self.cuda is not None:
-            x = x.cuda(self.cuda)
+            x = x.cuda(self.cuda, async=True)
         return x
 
     def params(self):
