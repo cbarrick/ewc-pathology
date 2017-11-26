@@ -70,7 +70,7 @@ class EWCTrainer:
         x = self.variable(x, volatile=True)
         y = self.variable(y, volatile=True)
         h = self.model(x)
-        l = F.log_softmax(h)[:, y]  # log-likelihood of true class
+        l = F.log_softmax(h)[:, y.data]  # log-likelihood of true class
         l.backward()
         grads = (p.grad.data for p in self.params())
         fisher = [(g ** 2).mean(0) for g in grads]
