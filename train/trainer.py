@@ -143,9 +143,12 @@ class EWCTrainer:
         self.opt.step()
         return j.data
 
-    def fit(self, train, validation=[], max_epochs=100, out=sys.stdout):
+    def fit(self, train, validation=[], max_epochs=100, patience=5, out=sys.stdout):
         '''Fit the model to a task.
         '''
+        best_loss = float('inf')
+        p = patience
+
         for epoch in range(max_epochs):
 
             print(f'epoch {epoch+1} [0%]', end='\r', flush=True, file=out)
@@ -160,11 +163,19 @@ class EWCTrainer:
                     break
 
             loss_v = self.test(validation)
-
             print(f'epoch {epoch+1}', end='', file=out)
             print(f' [Train loss: {loss_t:8.6f}]', end='', file=out)
             print(f' [Validation loss: {loss_v:8.6f}]', end='', file=out)
             print()
+
+            if loss_v < best_loss:
+                best_loss = loss_v
+                p = patience
+            else:
+                p -= 1
+                if p == 0:
+                    print('CONVERGED')
+                    break
 
         return loss_t
 
