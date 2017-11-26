@@ -2,9 +2,7 @@ import logging
 
 import torch
 import torch.autograd as A
-import torch.nn as N
 import torch.nn.functional as F
-import torch.optim as O
 
 
 logger = logging.getLogger(__name__)
