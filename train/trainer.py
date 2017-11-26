@@ -154,7 +154,8 @@ class EWCTrainer:
                 j = self.partial_fit(x, y)
                 loss_t += j.sum() / len(train.dataset)
                 progress = (i+1) / len(train)
-                print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=out)
+                if i % 10 == 0:
+                    print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=out)
                 if self.dev_mode:
                     break
 
