@@ -135,27 +135,27 @@ class EWCTrainer:
         self.opt.step()
         return j.data
 
-    def fit(self, data, validation_data=[], max_epochs=100, out=sys.stdout):
+    def fit(self, train, validation=[], max_epochs=100, out=sys.stdout):
         '''Fit the model to a task.
         '''
         for epoch in range(max_epochs):
 
             print(f'epoch {epoch+1} [0%]', end='\r', flush=True, file=out)
             loss_t = 0
-            for i, (x, y) in enumerate(data):
+            for i, (x, y) in enumerate(train):
                 j = self.partial_fit(x, y)
-                loss_t += j.sum() / len(data)
-                progress = (i+1) / len(data)
+                loss_t += j.sum() / len(train)
+                progress = (i+1) / len(train)
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=out)
 
-            loss_v = self.test(validation_data)
+            loss_v = self.test(validation)
 
             print(f'epoch {epoch+1}', end='', file=out)
             print(f' [Train loss: {loss_t:8.6f}]', end='', file=out)
             print(f' [Validation loss: {loss_v:8.6f}]', end='', file=out)
             print()
 
-        return loss
+        return loss_t
 
     def predict(self, x):
         '''Evaluate the model on some input batch.

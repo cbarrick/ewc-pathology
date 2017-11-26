@@ -43,7 +43,7 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None):
         for task, loader in tasks.items():
             print(f'-------- Training on {task} --------')
             train, validation, _ = loader.load(f, batch_size=batch_size)
-            model.fit(train, max_epochs=epochs)
+            model.fit(train, validation, max_epochs=epochs)
             model.consolidate(validation)
         for task, loader in tasks.items():
             print(f'-------- Scoring {task} --------')
