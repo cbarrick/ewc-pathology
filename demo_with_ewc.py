@@ -1,12 +1,10 @@
-# Entry point for EWC Trainer
 import argparse
-from model import  alexnet
-import numpy
 
-from datasets.nuclei import NucleiLoader
-from datasets.epi import EpitheliumLoader
+from datasets import NucleiLoader
+from datasets import EpitheliumLoader
 from ewc.trainer import Trainer
 from ewc.scores import Score
+from models import AlexNet
 
 import logging
 

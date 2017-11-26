@@ -1,13 +1,15 @@
-import torch
-import torch.nn as N
-import torch.nn.functional as F
-import torch.optim as O
-import torch.autograd as A
 import logging
 
-logger=logging.getLogger(__name__)
+import torch
+import torch.nn as N
+
+
+logger = logging.getLogger(__name__)
+
 
 class AlexNet(N.Module):
+    '''An AlexNet-like model based on the CIFAR-10 variant of AlexNet in Caffe.
+    '''
 
     def __init__(self, num_classes=2):
         super().__init__()

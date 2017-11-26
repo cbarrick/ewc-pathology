@@ -11,6 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 class EWCTrainer:
+    '''A model trainer that supports multiple tasks through EWC.
+
+    Elastic weight consolidation (EWC) is a method for training a single model
+    to perform multiple tasks. The idea is that we first train the model to
+    perform a single task, then we "consolidate" the parameters into a new
+    regularization term on the loss function before we start training on a new
+    task. This regularization allows the model to learn the new task while
+    keeping parameters which are important for the first task near to their
+    original values. Once we have trained on the second task, we can then
+    consolidate the weights again before training on a new task.
+
+    See the paper "Overcoming catastrophic forgetting in neural networks"
+    (https://arxiv.org/abs/1612.00796)
+    '''
+
     def __init__(self, model, opt, loss):
         '''Create an EWC trainer to train a model on multiple tasks.
 
@@ -25,7 +40,8 @@ class EWCTrainer:
         self._tasks = []
 
     def params(self):
-        '''Get the trainable paramaters from the optimizer.'''
+        '''Get the trainable paramaters from the optimizer.
+        '''
         return [p for group in self.opt.param_groups for p in group['params']]
 
     def fisher_information(self, x, y):
@@ -35,8 +51,8 @@ class EWCTrainer:
             x: A sample of inputs.
             y: The associated labels.
         '''
-        self.model.train()  # put the model in train mode, effects dropout layers etc.
-        self.opt.zero_grad()  # reset the gradients of the trainable variables.
+        self.model.eval()
+        self.opt.zero_grad()
         x = A.Variable(x, volatile=True)
         h = self.model(x)
         l = F.log_softmax(h)[:, y]  # log-likelihood of true class
@@ -53,6 +69,7 @@ class EWCTrainer:
         Args:
             x: A sample of inputs for the task.
             y: The associated labels.
+            lambda: The regularization constant for the new EWC term.
         '''
         params = [p.detach().data for p in self.params()]
         fisher = self.fisher_information(x, y)
