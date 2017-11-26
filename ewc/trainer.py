@@ -11,7 +11,7 @@ logging.basicConfig(level='DEBUG')
 logger = logging.getLogger(__name__)
 
 
-class Trainer:
+class EWCTrainer:
     def __init__(self, model, opt, loss):
         '''Create an EWC trainer to train a model on multiple tasks.
 
