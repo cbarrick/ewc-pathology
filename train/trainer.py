@@ -68,13 +68,11 @@ class EWCTrainer:
         '''
         self.model.eval()
         self.opt.zero_grad()
-        x = self.variable(x, volatile=True)
-        y = self.variable(y, volatile=True)
+        x = self.variable(x)
+        y = self.variable(y)
         h = self.model(x)
-        l = F.log_softmax(h)[:, y.data]  # log-likelihood of true class
-        print(y.size())
-        print(h.size())
-        print(l.size())
+        l = F.log_softmax(h)[range(y.size(0)), y.data]  # log-likelihood of true class
+        l = l.mean()
         l.backward()
         grads = (p.grad.data for p in self.params())
         fisher = [(g ** 2).mean(0) for g in grads]
@@ -85,13 +83,14 @@ class EWCTrainer:
 
         This adds an EWC regularization term to the loss function.
         '''
-        params = [p.data.clone() for p in self.params()]
+        params = [p.clone() for p in self.params()]
         fisher = [torch.zeros(p.size()) for p in self.params()]
+        fisher = [self.variable(f) for f in fisher]
 
         n = len(data)
         for x, y in data:
             for i, f in enumerate(self.fisher_information(x, y)):
-                fisher[i] += f / n
+                fisher[i] += self.variable(f) / n
             if self.dev_mode:
                 break
 
@@ -119,9 +118,11 @@ class EWCTrainer:
         # Add the ewc regularization for each consolidated task.
         params = self.params()
         for task in self._tasks:
+            a = task['alpha']
             ewc = ((p - t) ** 2 for t, p in zip(task['params'], params))
             ewc = (f * e for f, e in zip(task['fisher'], ewc))
-            ewc = (l/2 * e for l, e in zip(task['alpha'], ewc))
+            ewc = (a/2 * e for e in ewc)
+            ewc = (e.sum() for e in ewc)
             j += sum(ewc)
         return j
 
@@ -182,12 +183,25 @@ class EWCTrainer:
 
         If the criteria is None, the loss is returned.
         '''
+        if criteria is None:
+            criteria = self.loss
+
         self.model.eval()
         x = self.variable(x, volatile=True)
         y = self.variable(y, volatile=True)
         h = self.predict(x)
-        j = self.loss(h, y) if criteria is None else criteria(h, y)
-        return j.data
+
+        try:
+            # PyTorch criteria
+            j = criteria(h, y)
+            j = j.data
+        except ValueError:
+            # Scikit-Learn criteria
+            _, h = h.max(1)
+            h = h.data.cpu().numpy()
+            y = y.data.cpu().numpy()
+            j = criteria(y, h, labels=[0,1])
+        return j
 
     def test(self, data, criteria=None):
         '''Test the model against some task.

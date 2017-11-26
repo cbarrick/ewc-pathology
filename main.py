@@ -37,7 +37,7 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None):
         net = AlexNet(2)
         opt = O.Adam(net.parameters())
         loss = N.CrossEntropyLoss()
-        model = EWCTrainer(net, opt, loss, cuda, dev_mode=True)
+        model = EWCTrainer(net, opt, loss, cuda=cuda, dev_mode=True)
 
         print(f'================ Fold {f} ================')
         for task, loader in tasks.items():
