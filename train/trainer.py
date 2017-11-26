@@ -25,7 +25,7 @@ class EWCTrainer:
     (https://arxiv.org/abs/1612.00796)
     '''
 
-    def __init__(self, model, opt, loss, cuda=None):
+    def __init__(self, model, opt, loss, cuda=None, dev_mode=False):
         '''Create an EWC trainer to train a model on multiple tasks.
 
         Args:
@@ -40,6 +40,7 @@ class EWCTrainer:
         self.model = model
         self.opt = opt
         self.cuda = cuda
+        self.dev_mode = dev_mode
 
         self._loss = loss
         self._tasks = []
@@ -71,6 +72,9 @@ class EWCTrainer:
         y = self.variable(y, volatile=True)
         h = self.model(x)
         l = F.log_softmax(h)[:, y.data]  # log-likelihood of true class
+        print(y.size())
+        print(h.size())
+        print(l.size())
         l.backward()
         grads = (p.grad.data for p in self.params())
         fisher = [(g ** 2).mean(0) for g in grads]
@@ -88,6 +92,8 @@ class EWCTrainer:
         for x, y in data:
             for i, f in enumerate(self.fisher_information(x, y)):
                 fisher[i] += f / n
+            if self.dev_mode:
+                break
 
         task = {
             'params': params,
@@ -148,6 +154,8 @@ class EWCTrainer:
                 loss_t += j.sum() / len(train)
                 progress = (i+1) / len(train)
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=out)
+                if self.dev_mode:
+                    break
 
             loss_v = self.test(validation)
 
@@ -189,4 +197,6 @@ class EWCTrainer:
         for x, y in data:
             j = self.score(x, y, criteria)
             loss += j.sum() / n
+            if self.dev_mode:
+                break
         return loss
