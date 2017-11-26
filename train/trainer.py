@@ -125,6 +125,5 @@ class EWCTrainer:
         h = self.model(x)
         j = self.loss(h, y)
         j.backward()
-        j = j.data[0]
         self.opt.step()
         return j
