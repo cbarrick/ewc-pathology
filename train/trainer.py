@@ -201,6 +201,7 @@ class EWCTrainer:
             h = h.data.cpu().numpy()
             y = y.data.cpu().numpy()
             j = criteria(y, h, labels=[0,1])
+
         return j
 
     def test(self, data, criteria=None):

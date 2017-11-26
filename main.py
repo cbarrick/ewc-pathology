@@ -39,18 +39,20 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dev_mode=False):
         loss = N.CrossEntropyLoss()
         model = EWCTrainer(net, opt, loss, cuda=cuda, dev_mode=dev_mode)
 
-        print(f'================ Fold {f} ================')
+        print(f'================================ Fold {f} ================================')
         for task, loader in tasks.items():
             print(f'-------- Training on {task} --------')
             train, validation, _ = loader.load(f, batch_size=batch_size)
             model.fit(train, validation, max_epochs=epochs)
             model.consolidate(validation)
+            print()
         for task, loader in tasks.items():
             print(f'-------- Scoring {task} --------')
             _, _, test = loader.load(f, batch_size=batch_size)
             for metric, criteria in metrics.items():
                 z = model.test(test, criteria)
                 print(f'{metric}:', z)
+            print()
 
 
 if __name__ == '__main__':
