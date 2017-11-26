@@ -45,14 +45,12 @@ def main(n_folds=5, batch_size=64, cuda=None):
             train, validation, _ = loader.load(f, batch_size=batch_size)
             model.fit(train)
             model.consolidate(validation)
-            print()
         for task, loader in tasks.items():
             print(f'-------- Scoring {task} --------')
             _, _, test = loader.load(f, batch_size=batch_size)
             for metric, criteria in metrics.items():
                 z = model.test(test, criteria)
                 print(f'{metric}:', z)
-            print()
 
 
 if __name__ == '__main__':
