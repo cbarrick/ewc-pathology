@@ -25,18 +25,32 @@ class EWCTrainer:
     (https://arxiv.org/abs/1612.00796)
     '''
 
-    def __init__(self, model, opt, loss):
+    def __init__(self, model, opt, loss, cuda=None):
         '''Create an EWC trainer to train a model on multiple tasks.
 
         Args:
             model: The model to train.
             opt: The optimizer to step during training.
             loss: The loss function to minimize.
+            cuda: The cuda device to use.
         '''
+        if cuda is not None:
+            model = model.cuda(cuda)
+
         self.model = model
         self.opt = opt
+        self.cuda = cuda
+
         self._loss = loss
         self._tasks = []
+
+    def variable(self, x, **kwargs):
+        '''Cast a Tensor to a Variable on the same cuda device as the model.
+        '''
+        x = A.Variable(x, **kwargs)
+        if self.cuda is not None:
+            x = x.cuda(self.cuda)
+        return x
 
     def params(self):
         '''Get the trainable paramaters from the optimizer.
@@ -52,7 +66,8 @@ class EWCTrainer:
         '''
         self.model.eval()
         self.opt.zero_grad()
-        x = A.Variable(x, volatile=True)
+        x = self.variable(x, volatile=True)
+        y = self.variable(y, volatile=True)
         h = self.model(x)
         l = F.log_softmax(h)[:, y]  # log-likelihood of true class
         l.backward()
@@ -112,8 +127,8 @@ class EWCTrainer:
         '''
         self.model.train()  # put the model in train mode, effects dropout layers etc.
         self.opt.zero_grad()  # reset the gradients of the trainable variables.
-        x = A.Variable(x)
-        y = A.Variable(y)
+        x = self.variable(x)
+        y = self.variable(y)
         h = self.model(x)
         j = self.loss(h, y)
         j.backward()
@@ -141,7 +156,8 @@ class EWCTrainer:
             x: The input batch.
         '''
         self.model.eval()  # put the model in eval mode, effects dropout layers etc.
-        x = A.Variable(x, volatile=True)  # use volatile input to save memory when not training.
+        x = self.variable(x, volatile=True)  # use volatile input to save memory when not training.
+        x = x.cuda(self.cuda) if self.cuda is not None else x
         h = self.model(x)
         return h
 
