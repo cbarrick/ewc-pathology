@@ -59,7 +59,7 @@ class EWCTrainer:
         fisher = [(g ** 2).mean(0) for g in grads]
         return fisher
 
-    def consolidate(self, x, y, lambda=1):
+    def consolidate(self, x, y, alpha=1):
         '''Consolidate the weights of the current task.
 
         This adds an EWC regularization term to the loss function.
@@ -67,14 +67,14 @@ class EWCTrainer:
         Args:
             x: A sample of inputs for the task.
             y: The associated labels.
-            lambda: The regularization constant for the new EWC term.
+            alpha: The regularization constant for the new EWC term.
         '''
         params = [p.detach().data for p in self.params()]
         fisher = self.fisher_information(x, y)
         task = {
             'params': params,
             'fisher': fisher,
-            'lambda': lambda,
+            'alpha': alpha,  # The name 'lambda' is taken by the keyword.
         }
         self._tasks.append(task)
 
@@ -96,7 +96,7 @@ class EWCTrainer:
         for task in self._tasks:
             ewc = ((p - t) ** 2 for t, p in zip(task['params'], params))
             ewc = (f * e for f, e in zip(task['fisher'], ewc))
-            ewc = (l/2 * e for l, e in zip(task['lambda'], ewc)
+            ewc = (l/2 * e for l, e in zip(task['alpha'], ewc)
             j += sum(ewc)
         return j
 
