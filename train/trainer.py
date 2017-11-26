@@ -47,7 +47,8 @@ class EWCTrainer:
     def variable(self, x, **kwargs):
         '''Cast a Tensor to a Variable on the same cuda device as the model.
         '''
-        x = A.Variable(x, **kwargs)
+        if not isinstance(x, A.Variable):
+            x = A.Variable(x, **kwargs)
         if self.cuda is not None:
             x = x.cuda(self.cuda, async=True)
         return x
@@ -175,7 +176,7 @@ class EWCTrainer:
         If the criteria is None, the loss is returned.
         '''
         h = self.predict(x)
-        j = self.loss(h, y) if criteris is None else criteria(h, y)
+        j = self.loss(h, y) if criteria is None else criteria(h, y)
         return j.data
 
     def test(self, data, criteria=None):
