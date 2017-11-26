@@ -30,7 +30,7 @@ class AlexNet(N.Module):
             N.Linear(64*8*8, 64),
             N.Dropout(),
             N.ReLU(inplace=True),
-            N.Linear(64, self.num_classes),
+            N.Linear(64, num_classes),
             N.Dropout(),
             N.ReLU(inplace=True),
         )

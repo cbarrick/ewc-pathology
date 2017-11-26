@@ -96,7 +96,7 @@ class EWCTrainer:
         for task in self._tasks:
             ewc = ((p - t) ** 2 for t, p in zip(task['params'], params))
             ewc = (f * e for f, e in zip(task['fisher'], ewc))
-            ewc = (l/2 * e for l, e in zip(task['alpha'], ewc)
+            ewc = (l/2 * e for l, e in zip(task['alpha'], ewc))
             j += sum(ewc)
         return j
 
