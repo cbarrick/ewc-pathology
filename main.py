@@ -20,14 +20,11 @@ from models import AlexNet
 logger = logging.getLogger(__name__)
 
 
-def main():
-    n_folds = 5
-    batch_size = 64
-
+def main(n_folds=5, batch_size=64, cuda=None):
     net = AlexNet(2)
     opt = O.Adam(net.parameters())
     loss = N.CrossEntropyLoss()
-    model = EWCTrainer(net, opt, loss)
+    model = EWCTrainer(net, opt, loss, cuda)
 
     tasks = {
         'nuclei': NucleiLoader(k=n_folds),
@@ -59,4 +56,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Run the EWC experiment.')
+    parser.add_argument('-k', '--n_folds', metavar='N', type=int, default=5, help='The number of cross-validation folds.')
+    parser.add_argument('-b', '--batch_size', metavar='N', type=int, default=64, help='The batch size.')
+    parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='Use the Nth cuda device.')
+    args = parser.parse_args()
+    main(args.n_folds, args.batch_size, args.cuda)
