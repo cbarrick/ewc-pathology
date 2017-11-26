@@ -143,7 +143,7 @@ class EWCTrainer:
         self.opt.step()
         return j.data
 
-    def fit(self, train, validation=[], max_epochs=100, patience=5, out=sys.stdout):
+    def fit(self, train, validation=[], max_epochs=100, patience=5):
         '''Fit the model to a task.
         '''
         best_loss = float('inf')
@@ -151,22 +151,21 @@ class EWCTrainer:
 
         for epoch in range(max_epochs):
 
-            print(f'epoch {epoch+1} [0%]', end='\r', flush=True, file=out)
+            print(f'epoch {epoch+1} [0%]', end='\r', flush=True, file=sys.stderr)
             loss_t = 0
             for i, (x, y) in enumerate(train):
                 j = self.partial_fit(x, y)
                 loss_t += j.sum() / len(train.dataset)
                 progress = (i+1) / len(train)
-                if i % 10 == 0:
-                    print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=out)
+                print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=sys.stderr)
                 if self.dev_mode:
                     break
 
             loss_v = self.test(validation)
-            print(f'epoch {epoch+1}', end='', file=out)
-            print(f' [Train loss: {loss_t:8.6f}]', end='', file=out)
-            print(f' [Validation loss: {loss_v:8.6f}]', end='', file=out)
-            print()
+            print(f'epoch {epoch+1}', end='')
+            print(f' [Train loss: {loss_t:8.6f}]', end='')
+            print(f' [Validation loss: {loss_v:8.6f}]', end='')
+            print(flush=True)
 
             if loss_v < best_loss:
                 best_loss = loss_v
