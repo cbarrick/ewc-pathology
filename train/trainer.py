@@ -81,8 +81,8 @@ class EWCTrainer:
 
         This adds an EWC regularization term to the loss function.
         '''
-        params = [p.data.copy() for p in self.params()]
-        fisher = [torch.zeroes_like(p) for p in self.params()]
+        params = [p.data.clone() for p in self.params()]
+        fisher = [torch.zeros(p.size()) for p in self.params()]
 
         n = len(data)
         for x, y in data:
