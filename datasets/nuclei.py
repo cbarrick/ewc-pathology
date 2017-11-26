@@ -150,7 +150,7 @@ def get_metadata(image_path):
     }
 
 
-def create_cv(path, k=5, n=10000, **kwargs):
+def create_cv(path, k, n, **kwargs):
     '''Extract a training set of patches taken from all images in a directory.
 
     The dataset is folded for cross-validation by patient id.
@@ -230,7 +230,7 @@ class NucleiLoader:
                 The dataset will contain `n * bg_ratio`
                 negative background patches per source image.
         '''
-        folds = create_cv(path, k, **kwargs)
+        folds = create_cv(path, k, n, **kwargs)
         self.datasets = [NucleiDataset(f['pos'], f['neg']) for f in folds]
 
     def load_train(self, fold, **kwargs):

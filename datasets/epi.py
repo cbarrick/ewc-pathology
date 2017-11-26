@@ -110,7 +110,7 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     return pos, neg
 
 
-def create_cv(path, k=5, n=10000, **kwargs):
+def create_cv(path, k, n, **kwargs):
     data_dir = get_data(path)
     masks = sorted(data_dir.glob('masks/*_mask.png'))
     images = [data_dir / f'{m.stem[:-5]}.tif' for m in masks]
@@ -152,7 +152,7 @@ class EpitheliumDataset(torch.utils.data.Dataset):
 
 class EpitheliumLoader:
     def __init__(self, path='./data/epi', k=5, n=10000, **kwargs):
-        folds = create_cv(path, k, **kwargs)
+        folds = create_cv(path, k, n, **kwargs)
         self.datasets = [EpitheliumDataset(f['pos'], f['neg']) for f in folds]
 
     def load_train(self, fold, **kwargs):
