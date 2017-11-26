@@ -60,4 +60,4 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', metavar='N', type=int, default=100, help='The maximum number of epochs per task.')
     parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='Use the Nth cuda device.')
     args = parser.parse_args()
-    main(**args)
+    main(**vars(args))
