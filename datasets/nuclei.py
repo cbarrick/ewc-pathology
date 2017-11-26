@@ -193,9 +193,13 @@ class NucleiDataset(torch.utils.data.Dataset):
     def __getitem__(self, i):
         i -= self._split
         if i < 0:
-            return self._pos[i], np.float32(1)
+            x = self._pos[i]
+            y = 1
         else:
-            return self._neg[i], np.float32(0)
+            x = self._neg[i]
+            y = 0
+        x = np.transpose(x, (2,0,1))  # reorder to channels first for PyTorch
+        return x, y
 
 
 class NucleiLoader:
