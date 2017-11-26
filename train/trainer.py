@@ -87,7 +87,7 @@ class EWCTrainer:
         fisher = [torch.zeros(p.size()) for p in self.params()]
         fisher = [self.variable(f) for f in fisher]
 
-        n = len(data)
+        n = len(data.dataset)
         for x, y in data:
             for i, f in enumerate(self.fisher_information(x, y)):
                 fisher[i] += self.variable(f) / n
@@ -152,7 +152,7 @@ class EWCTrainer:
             loss_t = 0
             for i, (x, y) in enumerate(train):
                 j = self.partial_fit(x, y)
-                loss_t += j.sum() / len(train)
+                loss_t += j.sum() / len(train.dataset)
                 progress = (i+1) / len(train)
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=out)
                 if self.dev_mode:
@@ -207,7 +207,7 @@ class EWCTrainer:
     def test(self, data, criteria=None):
         '''Test the model against some task.
         '''
-        n = len(data)
+        n = len(data.dataset)
         loss = 0
         for x, y in data:
             j = self.score(x, y, criteria)
