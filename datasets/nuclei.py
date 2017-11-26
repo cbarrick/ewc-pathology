@@ -230,36 +230,21 @@ class NucleiLoader:
                 The dataset will contain `n * bg_ratio`
                 negative background patches per source image.
         '''
+        print('loading nuclei dataset...')
         folds = create_cv(path, k, n, **kwargs)
-        self.datasets = [NucleiDataset(f['pos'], f['neg']) for f in folds]
+        self.datasets = np.array([NucleiDataset(f['pos'], f['neg']) for f in folds])
 
-    def load_train(self, fold, **kwargs):
-        '''Loads the training set for the given fold.
+    def load(self, fold, **kwargs):
+        k = len(self.datasets)
+        assert 0 <= fold < k
 
-        The returned value is a torch `DataLoader` that iterates over batches
-        of the form `(x, y)`. The kwargs are forwarded to the `DataLoader`.
+        test = self.datasets[fold]
+        validation = self.datasets[(fold + 1) % k]
+        train = [ds for ds in self.datasets if ds != test and ds != validation]
+        train = torch.utils.data.ConcatDataset(train)
 
-        Some kwargs defaults have been overridden:
-            - `batch_size` defaults to 32.
-            - `shuffle` defaults to True.
-            - `pin_memory` defaults to True if cuda is avaliable.
-        '''
-        n = len(self.datasets)
-        ds = [self.datasets[f] for f in range(n) if f != fold % n]
-        ds = torch.utils.data.ConcatDataset(ds)
-        return torch.utils.data.DataLoader(ds, **kwargs)
+        test = torch.utils.data.DataLoader(test, **kwargs)
+        validation = torch.utils.data.DataLoader(validation, **kwargs)
+        train = torch.utils.data.DataLoader(train, **kwargs)
 
-    def load_test(self, fold, **kwargs):
-        '''Loads the test set for the given fold.
-
-        The returned value is a torch `DataLoader` that iterates over batches
-        of the form `(x, y)`. The kwargs are forwarded to the `DataLoader`.
-
-        Some kwargs defaults have been overridden:
-            - `batch_size` defaults to 32.
-            - `shuffle` defaults to True.
-            - `pin_memory` defaults to True if cuda is avaliable.
-        '''
-        n = len(self.datasets)
-        ds = self.datasets[fold % n]
-        return torch.utils.data.DataLoader(ds, **kwargs)
+        return train, validation, test

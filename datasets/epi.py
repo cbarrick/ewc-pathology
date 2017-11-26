@@ -166,16 +166,21 @@ class EpitheliumDataset(torch.utils.data.Dataset):
 
 class EpitheliumLoader:
     def __init__(self, path='./data/epi', k=5, n=10000, **kwargs):
+        print('loading epithelium dataset...')
         folds = create_cv(path, k, n, **kwargs)
         self.datasets = [EpitheliumDataset(f['pos'], f['neg']) for f in folds]
 
-    def load_train(self, fold, **kwargs):
-        n = len(self.datasets)
-        ds = [self.datasets[f] for f in range(n) if f != fold % n]
-        ds = torch.utils.data.ConcatDataset(ds)
-        return torch.utils.data.DataLoader(ds, **kwargs)
+    def load(self, fold, **kwargs):
+        k = len(self.datasets)
+        assert 0 <= fold < k
 
-    def load_test(self, fold, **kwargs):
-        n = len(self.datasets)
-        ds = self.datasets[fold % n]
-        return torch.utils.data.DataLoader(ds, **kwargs)
+        test = self.datasets[fold]
+        validation = self.datasets[(fold + 1) % k]
+        train = [ds for ds in self.datasets if ds != test and ds != validation]
+        train = torch.utils.data.ConcatDataset(train)
+
+        test = torch.utils.data.DataLoader(test, **kwargs)
+        validation = torch.utils.data.DataLoader(validation, **kwargs)
+        train = torch.utils.data.DataLoader(train, **kwargs)
+
+        return train, validation, test
