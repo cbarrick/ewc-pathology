@@ -7,7 +7,6 @@ import torch.nn.functional as F
 import torch.optim as O
 
 
-logging.basicConfig(level='DEBUG')
 logger = logging.getLogger(__name__)
 
 
