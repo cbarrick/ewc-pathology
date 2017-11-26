@@ -166,7 +166,6 @@ class EWCTrainer:
         '''
         self.model.eval()  # put the model in eval mode, effects dropout layers etc.
         x = self.variable(x, volatile=True)  # use volatile input to save memory when not training.
-        x = x.cuda(self.cuda) if self.cuda is not None else x
         h = self.model(x)
         return h
 
