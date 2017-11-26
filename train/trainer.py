@@ -175,6 +175,9 @@ class EWCTrainer:
 
         If the criteria is None, the loss is returned.
         '''
+        self.model.eval()
+        x = self.variable(x, volatile=True)
+        y = self.variable(y, volatile=True)
         h = self.predict(x)
         j = self.loss(h, y) if criteria is None else criteria(h, y)
         return j.data
