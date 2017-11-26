@@ -20,7 +20,7 @@ from models import AlexNet
 logger = logging.getLogger(__name__)
 
 
-def main(n_folds=5, batch_size=64, epochs=100, cuda=None):
+def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dev_mode=False):
     tasks = {
         'nuclei': NucleiLoader(k=n_folds),
         'epithelium': EpitheliumLoader(k=n_folds),
@@ -37,7 +37,7 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None):
         net = AlexNet(2)
         opt = O.Adam(net.parameters())
         loss = N.CrossEntropyLoss()
-        model = EWCTrainer(net, opt, loss, cuda=cuda, dev_mode=True)
+        model = EWCTrainer(net, opt, loss, cuda=cuda, dev_mode=dev_mode)
 
         print(f'================ Fold {f} ================')
         for task, loader in tasks.items():
@@ -55,9 +55,10 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run the EWC experiment.')
-    parser.add_argument('-k', '--n_folds', metavar='N', type=int, default=5, help='The number of cross-validation folds.')
-    parser.add_argument('-b', '--batch_size', metavar='N', type=int, default=64, help='The batch size.')
+    parser.add_argument('-k', '--n-folds', metavar='N', type=int, default=5, help='The number of cross-validation folds.')
+    parser.add_argument('-b', '--batch-size', metavar='N', type=int, default=64, help='The batch size.')
     parser.add_argument('-e', '--epochs', metavar='N', type=int, default=100, help='The maximum number of epochs per task.')
     parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='Use the Nth cuda device.')
+    parser.add_argument('-d', '--dev-mode', action='store_true', help='Run in dev mode.')
     args = parser.parse_args()
     main(**vars(args))
