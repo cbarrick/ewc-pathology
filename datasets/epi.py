@@ -54,6 +54,20 @@ def imread(path, mask=False):
     return image
 
 
+def background_mask(mask_p):
+    mask_b = np.logical_not(mask_p)
+    return mask_b
+
+
+def edge_mask(mask_p):
+    k = np.ones((5,5))
+    mask_p = mask_p.astype('uint8')
+    edges = cv2.dilate(mask_p, k)
+    edges = edges - mask_p
+    mask_e = edges.astype('bool')
+    return mask_e
+
+
 def extract_from_mask(image, mask, max_count=None, size=64, random=True):
     ar = np.require(image) # no copy
     mask = np.array(mask)  # copy
