@@ -62,10 +62,10 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dry_run=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run the EWC experiment.')
-    parser.add_argument('-k', '--n-folds', metavar='N', type=int, default=5, help='The number of cross-validation folds.')
-    parser.add_argument('-b', '--batch-size', metavar='N', type=int, default=64, help='The batch size.')
-    parser.add_argument('-e', '--epochs', metavar='N', type=int, default=100, help='The maximum number of epochs per task.')
-    parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='Use the Nth cuda device.')
-    parser.add_argument('-d', '--dry-run', action='store_true', help='Do a dry run to check for errors.')
+    parser.add_argument('-k', '--n-folds', metavar='N', type=int, default=5, help='the number of cross-validation folds')
+    parser.add_argument('-b', '--batch-size', metavar='N', type=int, default=64, help='the batch size')
+    parser.add_argument('-e', '--epochs', metavar='N', type=int, default=100, help='the maximum number of epochs per task')
+    parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='use the Nth cuda device')
+    parser.add_argument('-d', '--dry-run', action='store_true', help='do a dry run to check for errors')
     args = parser.parse_args()
     main(**vars(args))
