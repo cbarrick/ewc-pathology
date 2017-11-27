@@ -1,0 +1,148 @@
+loading nuclei dataset...
+loading epithelium dataset...
+================================ Fold 0 ================================
+-------- Training on nuclei --------
+epoch 1 [Train loss: 0.000762] [Validation loss: 0.000677]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000677]
+
+-------- Training on epithelium --------
+epoch 1 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000678]
+
+-------- Scoring nuclei --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0146649016622
+
+-------- Scoring epithelium --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0153736762447
+
+================================ Fold 1 ================================
+-------- Training on nuclei --------
+epoch 1 [Train loss: 0.000910] [Validation loss: 0.000677]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000677]
+
+-------- Training on epithelium --------
+epoch 1 [Train loss: 0.000677] [Validation loss: 0.000679]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000679]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000679]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000679]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000679]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000679]
+
+-------- Scoring nuclei --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0146649016622
+
+-------- Scoring epithelium --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0147909672535
+
+================================ Fold 2 ================================
+-------- Training on nuclei --------
+epoch 1 [Train loss: 0.000660] [Validation loss: 0.000678]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000678]
+
+-------- Training on epithelium --------
+epoch 1 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000678]
+
+-------- Scoring nuclei --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0146649016622
+
+-------- Scoring epithelium --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0146649016622
+
+================================ Fold 3 ================================
+-------- Training on nuclei --------
+epoch 1 [Train loss: 0.001077] [Validation loss: 0.005592]
+epoch 2 [Train loss: 0.000931] [Validation loss: 0.000677]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000677]
+epoch 7 [Train loss: 0.000677] [Validation loss: 0.000677]
+
+-------- Training on epithelium --------
+epoch 1 [Train loss: 0.000677] [Validation loss: 0.000680]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000680]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000680]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000680]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000680]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000680]
+
+-------- Scoring nuclei --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0147274637559
+
+-------- Scoring epithelium --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0146649016622
+
+================================ Fold 4 ================================
+-------- Training on nuclei --------
+epoch 1 [Train loss: 0.000771] [Validation loss: 0.000678]
+epoch 2 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 3 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 4 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 5 [Train loss: 0.000677] [Validation loss: 0.000678]
+epoch 6 [Train loss: 0.000677] [Validation loss: 0.000678]
+
+-------- Training on epithelium --------
+epoch 1 [Train loss: 0.000678] [Validation loss: 0.000683]
+epoch 2 [Train loss: 0.000678] [Validation loss: 0.000683]
+epoch 3 [Train loss: 0.000678] [Validation loss: 0.000683]
+epoch 4 [Train loss: 0.000678] [Validation loss: 0.000683]
+epoch 5 [Train loss: 0.000678] [Validation loss: 0.000683]
+epoch 6 [Train loss: 0.000678] [Validation loss: 0.000683]
+
+-------- Scoring nuclei --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0146649016622
+
+-------- Scoring epithelium --------
+f-measure: 0.0
+precision: 0.0
+recal: 0.0
+log-loss: 0.0148697662099
+
