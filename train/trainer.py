@@ -200,6 +200,7 @@ class EWCTrainer:
             if validation:
                 val_loss = self.test(validation)
                 print(f' [Validation loss: {val_loss:8.6f}]', end='')
+            print(flush=True)
 
             # Convergence test
             loss = val_loss if validation else train_loss
@@ -211,7 +212,6 @@ class EWCTrainer:
                 if p == 0:
                     break
 
-        print(flush=True)
         return loss
 
     def predict(self, x):
@@ -226,7 +226,8 @@ class EWCTrainer:
         self.net.eval()  # put the net in eval mode, effects dropout layers etc.
         x = self.variable(x, volatile=True)  # use volatile input to save memory when not training.
         h = self.net(x)
-        return h.max(1)
+        _, h = h.max(1)
+        return h
 
     def score(self, x, y, criteria=None):
         '''Score the model on a batch of inputs and labels.
