@@ -40,12 +40,14 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dry_run=False):
         model = EWCTrainer(net, opt, loss, cuda=cuda, dry_run=dry_run)
 
         print(f'================================ Fold {f} ================================')
+
         for task, loader in tasks.items():
             print(f'-------- Training on {task} --------')
             train, validation, _ = loader.load(f, batch_size=batch_size)
             model.fit(train, validation, max_epochs=epochs)
             model.consolidate(validation)
             print()
+
         for task, loader in tasks.items():
             print(f'-------- Scoring {task} --------')
             _, _, test = loader.load(f, batch_size=batch_size)
@@ -53,6 +55,9 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dry_run=False):
                 z = model.test(test, criteria)
                 print(f'{metric}:', z)
             print()
+
+        if dry_run:
+            break
 
 
 if __name__ == '__main__':
