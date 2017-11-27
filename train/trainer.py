@@ -25,7 +25,7 @@ class EWCTrainer:
     (https://arxiv.org/abs/1612.00796)
     '''
 
-    def __init__(self, model, opt, loss, cuda=None, dev_mode=False):
+    def __init__(self, model, opt, loss, cuda=None, dry_run=False):
         '''Create an EWC trainer to train a model on multiple tasks.
 
         Args:
@@ -40,7 +40,7 @@ class EWCTrainer:
         self.model = model
         self.opt = opt
         self.cuda = cuda
-        self.dev_mode = dev_mode
+        self.dry_run = dry_run
 
         self._loss = loss
         self._tasks = []
@@ -91,7 +91,7 @@ class EWCTrainer:
         for x, y in data:
             for i, f in enumerate(self.fisher_information(x, y)):
                 fisher[i] += self.variable(f) / n
-            if self.dev_mode:
+            if self.dry_run:
                 break
 
         task = {
@@ -158,7 +158,7 @@ class EWCTrainer:
                 loss_t += j.sum() / len(train.dataset)
                 progress = (i+1) / len(train)
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=sys.stderr)
-                if self.dev_mode:
+                if self.dry_run:
                     break
 
             loss_v = self.test(validation)
@@ -223,6 +223,6 @@ class EWCTrainer:
         for x, y in data:
             j = self.score(x, y, criteria)
             loss += j.sum() / n
-            if self.dev_mode:
+            if self.dry_run:
                 break
         return loss
