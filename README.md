@@ -1,5 +1,9 @@
 # Multitask learning for Digital Pathology
 
+This experiment implements [elastic weight consolidation][ewc] to train a single network to perform two distinct computer vision tasks in Digital Pathology using a single set of parameters.
+
+[ewc]: https://arxiv.org/abs/1612.00796
+
 
 ## Reproducing the experiment
 
@@ -33,5 +37,7 @@ $ python -u ./main.py | tee experiment.out
 ```
 
 
-## Resources
-Proposal:  https://docs.google.com/document/d/1LIX4NpmbNnJfMFjX9pOtjJmBfRRfKbWh5xjthl7jTdI
+## Credits
+- Chris Barrick (cbarrick@uga.edu, @cbarrick)
+- Aditya Shinde (adityas@uga.edu, @adityashinde1506)
+- Prajay Shetty (pjs37741@uga.edu, @CodeMaster001)
