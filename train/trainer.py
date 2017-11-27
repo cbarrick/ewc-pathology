@@ -205,7 +205,7 @@ class EWCTrainer:
         try:
             # PyTorch criteria
             j = criteria(h, y)
-            j = j.data
+            j = j.data.sum()
         except ValueError:
             # Scikit-Learn criteria
             _, h = h.max(1)
@@ -222,7 +222,7 @@ class EWCTrainer:
         loss = 0
         for x, y in data:
             j = self.score(x, y, criteria)
-            loss += j.sum() / n
+            loss += j / n
             if self.dry_run:
                 break
         return loss
