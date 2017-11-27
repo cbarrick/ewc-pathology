@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class EWCTrainer:
-    '''A model trainer that supports multiple tasks through EWC.
+    '''A network trainer that supports multiple tasks through EWC.
 
     Elastic weight consolidation (EWC) is a method for training a single model
     to perform multiple tasks. The idea is that we first train the model to
@@ -25,19 +25,19 @@ class EWCTrainer:
     (https://arxiv.org/abs/1612.00796)
     '''
 
-    def __init__(self, model, opt, loss, cuda=None, dry_run=False):
-        '''Create an EWC trainer to train a model on multiple tasks.
+    def __init__(self, net, opt, loss, cuda=None, dry_run=False):
+        '''Create an EWC trainer to train a network on multiple tasks.
 
         Args:
-            model: The model to train.
+            net: The network to train.
             opt: The optimizer to step during training.
             loss: The loss function to minimize.
             cuda: The cuda device to use.
         '''
         if cuda is not None:
-            model = model.cuda(cuda)
+            net = net.cuda(cuda)
 
-        self.model = model
+        self.net = net
         self.opt = opt
         self.cuda = cuda
         self.dry_run = dry_run
@@ -46,7 +46,13 @@ class EWCTrainer:
         self._tasks = []
 
     def variable(self, x, **kwargs):
-        '''Cast a Tensor to a Variable on the same cuda device as the model.
+        '''Cast a tensor to a `Variable` on the same cuda device as the network.
+
+        If the input is already a `Variable`, it is not wrapped.
+
+        Args:
+            x: The tensor to wrap.
+            **kwargs: Passed to the `Variable` constructor.
         '''
         if not isinstance(x, A.Variable):
             x = A.Variable(x, **kwargs)
@@ -55,7 +61,10 @@ class EWCTrainer:
         return x
 
     def params(self):
-        '''Get the trainable paramaters from the optimizer.
+        '''Get the list of trainable paramaters.
+
+        Returns:
+            A list of all parameters in the optimizer's `param_groups`.
         '''
         return [p for group in self.opt.param_groups for p in group['params']]
 
@@ -63,14 +72,18 @@ class EWCTrainer:
         '''Compute the Fisher information of the trainable parameters.
 
         Args:
-            x: A sample of inputs.
-            y: The associated labels.
+            x: A batch of inputs.
+            y: A batch of labels.
+
+        Returns:
+            Returns the fisher information of the trainable parameter.
+            The values are arranged similarly to `EWCTrainer.params()`.
         '''
-        self.model.eval()
+        self.net.eval()
         self.opt.zero_grad()
         x = self.variable(x)
         y = self.variable(y)
-        h = self.model(x)
+        h = self.net(x)
         l = F.log_softmax(h)[range(y.size(0)), y.data]  # log-likelihood of true class
         l = l.mean()
         l.backward()
@@ -82,6 +95,10 @@ class EWCTrainer:
         '''Consolidate the weights given a sample of the current task.
 
         This adds an EWC regularization term to the loss function.
+
+        Args:
+            data: A `torch.DataLoader` of samples from the current task.
+            alpha: The regularization strength for this task.
         '''
         params = [p.clone() for p in self.params()]
         fisher = [torch.zeros(p.size()) for p in self.params()]
@@ -103,11 +120,15 @@ class EWCTrainer:
         self._tasks.append(task)
 
     def loss(self, h, y):
-        '''Compute the loss between hypotheses and true label.
+        '''Compute the EWC loss between hypotheses and true label.
 
         Args:
-            h: The hypotheses.
-            y: The labels.
+            h: A batch of hypotheses.
+            y: A batch of true labels.
+
+        Returns:
+            Returns the base loss function plus
+            EWC regularization terms for each task.
         '''
         j = self._loss(h, y)
 
@@ -132,83 +153,102 @@ class EWCTrainer:
         Args:
             x: The input batch.
             y: The class labels.
+
+        Returns:
+            Returns the sum of losses for this batch.
         '''
-        self.model.train()  # put the model in train mode, effects dropout layers etc.
+        self.net.train()  # put the net in train mode, effects dropout layers etc.
         self.opt.zero_grad()  # reset the gradients of the trainable variables.
         x = self.variable(x)
         y = self.variable(y)
-        h = self.model(x)
+        h = self.net(x)
         j = self.loss(h, y)
         j.backward()
         self.opt.step()
-        return j.data
+        return j.data.sum()
 
-    def fit(self, train, validation=[], max_epochs=100, patience=5):
-        '''Fit the model to a task.
+    def fit(self, train, validation=None, max_epochs=100, patience=5):
+        '''Fit the model to a dataset.
+
+        Args:
+            train: A `torch.DataLoader` to fit.
+            validation: A `torch.DataLoader` to use as the validation set.
+            max_epochs: The maximum number of epochs to spend training.
+            patience: Stop if the validation loss does not improve after this many epochs.
+
+        Returns:
+            Returns the validation loss.
+            Returns train loss if no validation set is given.
         '''
         best_loss = float('inf')
         p = patience
-
         for epoch in range(max_epochs):
 
+            # Train
+            train_loss = 0
             print(f'epoch {epoch+1} [0%]', end='\r', flush=True, file=sys.stderr)
-            loss_t = 0
             for i, (x, y) in enumerate(train):
                 j = self.partial_fit(x, y)
-                loss_t += j.sum() / len(train.dataset)
+                train_loss += j / len(train.dataset)
                 progress = (i+1) / len(train)
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=sys.stderr)
                 if self.dry_run:
                     break
+            print(f'epoch {epoch+1} [Train loss: {train_loss:8.6f}]', end='')
 
-            loss_v = self.test(validation)
-            print(f'epoch {epoch+1}', end='')
-            print(f' [Train loss: {loss_t:8.6f}]', end='')
-            print(f' [Validation loss: {loss_v:8.6f}]', end='')
-            print(flush=True)
+            # Validate
+            if validation:
+                val_loss = self.test(validation)
+                print(f' [Validation loss: {val_loss:8.6f}]', end='')
 
-            if loss_v < best_loss:
-                best_loss = loss_v
+            # Convergence test
+            loss = val_loss if validation else train_loss
+            if loss < best_loss:
+                best_loss = loss
                 p = patience
             else:
                 p -= 1
                 if p == 0:
-                    print('CONVERGED')
                     break
 
-        return loss_t
+        print(flush=True)
+        return loss
 
     def predict(self, x):
-        '''Evaluate the model on some input batch.
+        '''Predict the classes of some input batch.
 
         Args:
             x: The input batch.
+
+        Returns:
+            A tensor of predicted classes for each row of the input.
         '''
-        self.model.eval()  # put the model in eval mode, effects dropout layers etc.
+        self.net.eval()  # put the net in eval mode, effects dropout layers etc.
         x = self.variable(x, volatile=True)  # use volatile input to save memory when not training.
-        h = self.model(x)
-        return h
+        h = self.net(x)
+        return h.max(1)
 
     def score(self, x, y, criteria=None):
-        '''Score the model against some criteria.
+        '''Score the model on a batch of inputs and labels.
 
-        If the criteria is None, the loss is returned.
+        Args:
+            x: The input batch.
+            y: The targets.
+            criteria: The metric to measure; defaults to the loss.
+
+        Returns:
+            Returns the result of `criteria(true, predicted)`
         '''
-        if criteria is None:
-            criteria = self.loss
-
-        self.model.eval()
+        self.net.eval()
         x = self.variable(x, volatile=True)
         y = self.variable(y, volatile=True)
-        h = self.predict(x)
 
-        try:
-            # PyTorch criteria
-            j = criteria(h, y)
+        if criteria is None:
+            h = self.net(x)
+            j = self.loss(h, y)
             j = j.data.sum()
-        except ValueError:
-            # Scikit-Learn criteria
-            _, h = h.max(1)
+        else:
+            h = self.predict(x)
             h = h.data.cpu().numpy()
             y = y.data.cpu().numpy()
             j = criteria(y, h, labels=[0,1])
@@ -216,7 +256,11 @@ class EWCTrainer:
         return j
 
     def test(self, data, criteria=None):
-        '''Test the model against some task.
+        '''Score the model on a dataset.
+
+        Args:
+            data: A `torch.DataLoader` to score against.
+            criteria: The metric to measure; defaults to the loss.
         '''
         n = len(data.dataset)
         loss = 0
