@@ -39,11 +39,18 @@ class EWCTrainer:
 
         self.net = net
         self.opt = opt
+        self._loss = loss
         self.cuda = cuda
         self.dry_run = dry_run
 
-        self._loss = loss
+        self.reset()
+
+    def reset(self):
+        '''Reset the trainer to it's initial state.
+        '''
         self._tasks = []
+        self.net.reset()
+        return self
 
     def variable(self, x, **kwargs):
         '''Cast a tensor to a `Variable` on the same cuda device as the network.

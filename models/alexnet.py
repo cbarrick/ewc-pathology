@@ -35,14 +35,17 @@ class AlexNet(N.Module):
             N.ReLU(inplace=True),
         )
 
-        for m in self.modules():
-            if isinstance(m, (N.Conv2d, N.Linear)):
-                N.init.kaiming_uniform(m.weight.data)
-                if m.bias is not None:
-                    m.bias.data.zero_()
+        self.reset()
 
     def forward(self, x):
         x = self.features(x)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
+
+    def reset(self):
+        for m in self.modules():
+            if isinstance(m, (N.Conv2d, N.Linear)):
+                N.init.kaiming_uniform(m.weight.data)
+                if m.bias is not None:
+                    m.bias.data.zero_()

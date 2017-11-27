@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 
 
 def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dry_run=False):
+    net = AlexNet(2)
+    opt = O.Adam(net.parameters())
+    loss = N.CrossEntropyLoss()
+    model = EWCTrainer(net, opt, loss, cuda=cuda, dry_run=dry_run)
+
     tasks = {
         'nuclei': NucleiLoader(k=n_folds),
         'epithelium': EpitheliumLoader(k=n_folds),
@@ -34,12 +39,8 @@ def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dry_run=False):
     }
 
     for f in range(n_folds):
-        net = AlexNet(2)
-        opt = O.Adam(net.parameters())
-        loss = N.CrossEntropyLoss()
-        model = EWCTrainer(net, opt, loss, cuda=cuda, dry_run=dry_run)
-
         print(f'================================ Fold {f} ================================')
+        model.reset()
 
         for task, loader in tasks.items():
             print(f'-------- Training on {task} --------')
