@@ -11,8 +11,8 @@ import torch.nn as N
 import torch.nn.functional as F
 import torch.optim as O
 
-from datasets import NucleiLoader
-from datasets import EpitheliumLoader
+from datasets import NucleiSegmentation
+from datasets import EpitheliumSegmentation
 from train import EWCTrainer
 from models import AlexNet
 
@@ -41,8 +41,8 @@ def main(
     model = EWCTrainer(net, opt, loss, cuda=cuda, dry_run=dry_run)
 
     tasks = {
-        'nuclei': NucleiLoader(n=data_size, k=n_folds),
-        'epithelium': EpitheliumLoader(n=data_size, k=n_folds),
+        'nuclei': NucleiSegmentation(n=data_size, k=n_folds),
+        'epithelium': EpitheliumSegmentation(n=data_size, k=n_folds),
     }
 
     metrics = {
@@ -52,22 +52,27 @@ def main(
         'log-loss': sklearn.metrics.log_loss,
     }
 
+    data_args = {
+        'batch_size': batch_size,
+        'pin_memory': cuda is not False,
+    }
+
     for f in range(n_folds):
         print(f'================================ Fold {f} ================================')
         model.reset()
 
         for task, loader in tasks.items():
             print(f'-------- Training on {task} --------')
-            train, validation, _ = loader.load(f, batch_size=batch_size)
-            model.fit(train, validation, max_epochs=epochs)
-            model.consolidate(validation)
+            train, validation, _ = loader.load(f)
+            model.fit(train, validation, max_epochs=epochs, **data_args)
+            model.consolidate(validation, **data_args)
             print()
 
         for task, loader in tasks.items():
             print(f'-------- Scoring {task} --------')
-            _, _, test = loader.load(f, batch_size=batch_size)
+            _, _, test = loader.load(f)
             for metric, criteria in metrics.items():
-                z = model.test(test, criteria)
+                z = model.test(test, criteria, **data_args)
                 print(f'{metric}:', z)
             print()
 

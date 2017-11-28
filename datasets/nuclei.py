@@ -213,7 +213,7 @@ class NucleiDataset(torch.utils.data.Dataset):
         return x, y
 
 
-class NucleiLoader:
+class NucleiSegmentation:
     '''A dataloader for the nuclei segmentation dataset.
     '''
     def __init__(self, path='./data/nuclei', k=5, n=10000, **kwargs):
@@ -245,22 +245,13 @@ class NucleiLoader:
         folds = create_cv(path, k, n, **kwargs)
         self.datasets = np.array([NucleiDataset(f['pos'], f['neg']) for f in folds])
 
-    def load(self, fold, **kwargs):
+    def load(self, fold):
         k = len(self.datasets)
         assert 0 <= fold < k
-
-        kwargs.setdefault('shuffle', True)
-        # kwargs.setdefault('num_workers', 4)  # causing a deadlock?
-        kwargs.setdefault('pin_memory', torch.cuda.is_available())
-        logger.debug(f'data loader settings: {kwargs}')
 
         test = self.datasets[fold]
         validation = self.datasets[(fold + 1) % k]
         train = [ds for ds in self.datasets if ds != test and ds != validation]
         train = torch.utils.data.ConcatDataset(train)
-
-        test = torch.utils.data.DataLoader(test, **kwargs)
-        validation = torch.utils.data.DataLoader(validation, **kwargs)
-        train = torch.utils.data.DataLoader(train, **kwargs)
 
         return train, validation, test
