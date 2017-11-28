@@ -17,10 +17,23 @@ from train import EWCTrainer
 from models import AlexNet
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
-def main(n_folds=5, batch_size=64, epochs=100, cuda=None, dry_run=False):
+def main(
+    n_folds=5,
+    batch_size=64,
+    epochs=100,
+    cuda=None,
+    dry_run=False,
+    log_level='DEBUG',
+):
+    logging.basicConfig(
+        level=log_level,
+        style='{',
+        format='[{levelname:.4}][{asctime}][{name}:{lineno}] {msg}',
+    )
+
     net = AlexNet(2)
     opt = O.Adam(net.parameters())
     loss = N.CrossEntropyLoss()
@@ -68,5 +81,6 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', metavar='N', type=int, default=100, help='the maximum number of epochs per task')
     parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='use the Nth cuda device')
     parser.add_argument('-d', '--dry-run', action='store_true', help='do a dry run to check for errors')
+    parser.add_argument('-l', '--log-level', help='set the log level')
     args = parser.parse_args()
     main(**vars(args))

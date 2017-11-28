@@ -1,3 +1,4 @@
+import logging
 import re
 import tarfile
 from pathlib import Path
@@ -12,6 +13,9 @@ import torch
 import torch.utils.data
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_data(path='./data/nuclei', force_download=False):
     '''Download the data and return a Path to the directory.'''
     src = 'http://andrewjanowczyk.com/wp-static/nuclei.tgz'
@@ -21,7 +25,7 @@ def get_data(path='./data/nuclei', force_download=False):
     if dst.exists() and not force_download:
         return dst
 
-    print(f'downloading {src}')
+    logger.info(f'downloading {src}')
     r = requests.get(src, stream=True)
     with arc.open('wb') as fd:
         for chunk in r.iter_content(chunk_size=128):
@@ -161,6 +165,7 @@ def create_cv(path, k, n, **kwargs):
 
     Kwargs are passed to `extract_patches`.
     '''
+    logger.debug('creating cross validation folds')
     data_dir = get_data(path)
     masks = sorted(data_dir.glob('*_mask.png'))
     images = sorted(data_dir.glob('*_original.tif'))
@@ -175,6 +180,12 @@ def create_cv(path, k, n, **kwargs):
         f = hash(meta['patient']) % k
         folds[f]['pos'].extend(pos)
         folds[f]['neg'].extend(neg)
+
+    for f in range(k):
+        fold = folds[f]
+        pos = len(fold['pos'])
+        neg = len(fold['neg'])
+        logger.debug(f'fold {f} has {pos}/{neg} positive/negative samples')
 
     return folds
 
@@ -230,7 +241,7 @@ class NucleiLoader:
                 The dataset will contain `n * bg_ratio`
                 negative background patches per source image.
         '''
-        print('loading nuclei dataset...')
+        logger.info('loading nuclei dataset...')
         folds = create_cv(path, k, n, **kwargs)
         self.datasets = np.array([NucleiDataset(f['pos'], f['neg']) for f in folds])
 
