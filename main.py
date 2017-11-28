@@ -21,6 +21,7 @@ logger = logging.getLogger()
 
 
 def main(
+    data_size=10000,
     n_folds=5,
     batch_size=64,
     epochs=100,
@@ -40,8 +41,8 @@ def main(
     model = EWCTrainer(net, opt, loss, cuda=cuda, dry_run=dry_run)
 
     tasks = {
-        'nuclei': NucleiLoader(k=n_folds),
-        'epithelium': EpitheliumLoader(k=n_folds),
+        'nuclei': NucleiLoader(n=data_size, k=n_folds),
+        'epithelium': EpitheliumLoader(n=data_size, k=n_folds),
     }
 
     metrics = {
@@ -76,6 +77,7 @@ def main(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run the EWC experiment.')
+    parser.add_argument('-n', '--data-size', metavar='N', type=int, default=10000, help='the number of training samples is a function of N')
     parser.add_argument('-k', '--n-folds', metavar='N', type=int, default=5, help='the number of cross-validation folds')
     parser.add_argument('-b', '--batch-size', metavar='N', type=int, default=64, help='the batch size')
     parser.add_argument('-e', '--epochs', metavar='N', type=int, default=100, help='the maximum number of epochs per task')
