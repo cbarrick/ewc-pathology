@@ -27,7 +27,7 @@ optional arguments:
 The exact command used to run the reported experiment is:
 
 ```
-$ ./main.py --n-folds=5 --batch-size=1024 --cuda=0
+$ ./main.py --n-folds=5 --batch-size=1024 --data-size=10000 --epochs=25 --cuda=0
 ```
 
 Protip: To tee the output to a file and keep the pretty progress report in the terminal, use `python -u`:
