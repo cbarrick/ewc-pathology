@@ -95,7 +95,7 @@ class EWCTrainer:
         l = l.mean()
         l.backward()
         grads = (p.grad.data for p in self.params())
-        fisher = [(g ** 2).mean(0) for g in grads]
+        fisher = [(g ** 2) for g in grads]
         return fisher
 
     def consolidate(self, data, alpha=1):
