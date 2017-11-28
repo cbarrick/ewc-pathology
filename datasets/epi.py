@@ -185,6 +185,11 @@ class EpitheliumLoader:
         k = len(self.datasets)
         assert 0 <= fold < k
 
+        kwargs.setdefault('shuffle', True)
+        kwargs.setdefault('num_workers', 4)
+        kwargs.setdefault('pin_memory', torch.cuda.is_available())
+        logger.debug(f'data loader settings: {kwargs}')
+
         test = self.datasets[fold]
         validation = self.datasets[(fold + 1) % k]
         train = [ds for ds in self.datasets if ds != test and ds != validation]
