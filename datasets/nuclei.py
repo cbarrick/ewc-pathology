@@ -250,7 +250,7 @@ class NucleiLoader:
         assert 0 <= fold < k
 
         kwargs.setdefault('shuffle', True)
-        kwargs.setdefault('num_workers', 4)
+        # kwargs.setdefault('num_workers', 4)  # causing a deadlock?
         kwargs.setdefault('pin_memory', torch.cuda.is_available())
         logger.debug(f'data loader settings: {kwargs}')
 
