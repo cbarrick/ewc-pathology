@@ -47,7 +47,8 @@ $ ./main.py \
     --folds=5 \
     --epochs=50 \
     --ewc=15 \
-    --batch-size=1024
+    --batch-size=1024 \
+    --cuda=0
 ```
 
 Protip: To tee the output to a file and keep the pretty progress report in the

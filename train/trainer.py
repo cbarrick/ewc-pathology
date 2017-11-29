@@ -203,7 +203,7 @@ class EWCTrainer:
         self.opt.step()
         return j.data.mean()
 
-    def fit(self, train, validation, max_epochs=100, patience=5, **kwargs):
+    def fit(self, train, validation=None, max_epochs=100, patience=5, **kwargs):
         '''Fit the model to a dataset.
 
         Args:
@@ -238,26 +238,28 @@ class EWCTrainer:
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=sys.stderr)
                 if self.dry_run:
                     break
-            print(f'epoch {epoch+1} [Train loss: {train_loss:8.6f}]', end='')
+            print(f'epoch {epoch+1} [Train loss: {train_loss:8.6f}]', end='', flush=True)
 
             # Validate
-            val_loss = self.test(validation)
-            print(f' [Validation loss: {val_loss:8.6f}]', end='')
-            print(flush=True)
+            if validation:
+                val_loss = self.test(validation)
+                print(f' [Validation loss: {val_loss:8.6f}]', end='', flush=True)
+            print()
 
-            # Convergence test
-            if val_loss < best_loss:
-                best_loss = val_loss
-                p = patience
-                now = np.datetime64('now')
-                path = Path(f'./_parameters/{self.name}.{now}.torch')
-                logger.info(f'saving to {path}')
-                self.save(path)
-                best_params = path
-            else:
-                p -= 1
-                if p == 0:
-                    break
+            # Early stopping
+            if validation:
+                if val_loss < best_loss:
+                    best_loss = val_loss
+                    p = patience
+                    now = np.datetime64('now')
+                    path = Path(f'./_parameters/{self.name}.{now}.torch')
+                    logger.info(f'saving to {path}')
+                    self.save(path)
+                    best_params = path
+                else:
+                    p -= 1
+                    if p == 0:
+                        break
 
         self.load(best_params)
         return val_loss
