@@ -222,6 +222,7 @@ class EWCTrainer:
         train = D.DataLoader(train, **kwargs)
 
         best_loss = float('inf')
+        best_params = None
         p = patience
 
         for epoch in range(max_epochs):
@@ -252,11 +253,13 @@ class EWCTrainer:
                 path = Path(f'./_parameters/{self.name}.{now}.torch')
                 logger.info(f'saving to {path}')
                 self.save(path)
+                best_params = path
             else:
                 p -= 1
                 if p == 0:
                     break
 
+        self.load(best_params)
         return val_loss
 
     def predict(self, x):
