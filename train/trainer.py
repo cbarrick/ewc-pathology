@@ -61,6 +61,8 @@ class EWCTrainer:
     def save(self, path):
         '''Saves the model parameters to disk.
         '''
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
         state = self.net.state_dict()
         torch.save(state, str(path))
         return self
@@ -68,6 +70,8 @@ class EWCTrainer:
     def load(self, path):
         '''Loads the model parameters from disk.
         '''
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
         state = torch.load(str(path))
         self.net.load_state_dict(state)
         return self
