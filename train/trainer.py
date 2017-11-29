@@ -1,5 +1,8 @@
 import logging
 import sys
+from pathlib import Path
+
+import numpy as np
 
 import torch
 import torch.autograd as A
@@ -26,14 +29,16 @@ class EWCTrainer:
     (https://arxiv.org/abs/1612.00796)
     '''
 
-    def __init__(self, net, opt, loss, cuda=None, dry_run=False):
+    def __init__(self, net, opt, loss, name='model', cuda=None, dry_run=False):
         '''Create an EWC trainer to train a network on multiple tasks.
 
         Args:
             net: The network to train.
             opt: The optimizer to step during training.
             loss: The loss function to minimize.
+            name: A name for the model.
             cuda: The cuda device to use.
+            dry_run: Cut loops short.
         '''
         if cuda is not None:
             net = net.cuda(cuda)
@@ -41,6 +46,7 @@ class EWCTrainer:
         self.net = net
         self.opt = opt
         self._loss = loss
+        self.name = name
         self.cuda = cuda
         self.dry_run = dry_run
         self.reset()
@@ -50,6 +56,20 @@ class EWCTrainer:
         '''
         self._tasks = []
         self.net.reset()
+        return self
+
+    def save(self, path):
+        '''Saves the model parameters to disk.
+        '''
+        state = self.net.state_dict()
+        torch.save(state, str(path))
+        return self
+
+    def load(self, path):
+        '''Loads the model parameters from disk.
+        '''
+        state = torch.load(str(path))
+        self.net.load_state_dict(state)
         return self
 
     def variable(self, x, **kwargs):
@@ -199,6 +219,7 @@ class EWCTrainer:
 
         best_loss = float('inf')
         p = patience
+
         for epoch in range(max_epochs):
 
             # Train
@@ -223,6 +244,10 @@ class EWCTrainer:
             if val_loss < best_loss:
                 best_loss = val_loss
                 p = patience
+                now = np.datetime64('now')
+                path = Path(f'./_parameters/{self.name}.{now}.torch')
+                logger.info(f'saving to {path}')
+                self.save(path)
             else:
                 p -= 1
                 if p == 0:
