@@ -32,6 +32,7 @@ def main(**kwargs):
     kwargs.setdefault('dry_run', False)
     kwargs.setdefault('name', 'ewc')
     kwargs.setdefault('log', 'DEBUG')
+    kwargs.setdefault('tasks', ['nuclei', 'epi'])
     args = SimpleNamespace(**kwargs)
 
     logging.basicConfig(
@@ -45,9 +46,9 @@ def main(**kwargs):
     loss = N.CrossEntropyLoss()
     model = EWCTrainer(net, opt, loss, name=args.name, cuda=args.cuda, dry_run=args.dry_run)
 
-    tasks = {
+    datasets = {
         'nuclei': NucleiSegmentation(n=args.data_size, k=args.folds),
-        'epithelium': EpitheliumSegmentation(n=args.data_size, k=args.folds),
+        'epi': EpitheliumSegmentation(n=args.data_size, k=args.folds),
     }
 
     metrics = {
@@ -66,15 +67,17 @@ def main(**kwargs):
         print(f'================================ Fold {f} ================================')
         model.reset()
 
-        for task, loader in tasks.items():
+        for task in args.tasks:
             print(f'-------- Training on {task} --------')
+            loader = datasets[task]
             train, validation, _ = loader.load(f)
             model.fit(train, validation, max_epochs=args.epochs, patience=args.patience, **data_args)
             model.consolidate(validation, alpha=args.ewc, **data_args)
             print()
 
-        for task, loader in tasks.items():
+        for task in args.tasks:
             print(f'-------- Scoring {task} --------')
+            loader = datasets[task]
             _, _, test = loader.load(f)
             for metric, criteria in metrics.items():
                 z = model.test(test, criteria, **data_args)
@@ -91,6 +94,8 @@ if __name__ == '__main__':
         add_help=False,
         argument_default=argparse.SUPPRESS,
     )
+
+    parser.add_argument('tasks', metavar='TASK', nargs='*', help='The list of tasks to experiment with.')
 
     group = parser.add_argument_group('Hyper-parameters')
     group.add_argument('-n', '--data-size', metavar='N', type=int, help='The number of training samples is a function of N.')
