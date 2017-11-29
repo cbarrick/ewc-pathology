@@ -54,7 +54,7 @@ class EWCTrainer:
     def reset(self):
         '''Reset the trainer to it's initial state.
         '''
-        self._tasks = []
+        self.ewc = None
         self.net.reset()
         return self
 
@@ -147,13 +147,11 @@ class EWCTrainer:
             if self.dry_run:
                 break
 
-        task = {
+        self.ewc = {
             'params': params,
             'fisher': fisher,
             'alpha': alpha,  # The name 'lambda' is taken by the keyword.
         }
-
-        self._tasks.append(task)
 
     def loss(self, h, y):
         '''Compute the EWC loss between hypotheses and true label.
@@ -169,18 +167,17 @@ class EWCTrainer:
         j = self._loss(h, y)
 
         # Return the normal loss if there are no consolidated tasks.
-        if len(self._tasks) == 0:
+        if self.ewc is None:
             return j
 
         # Add the ewc regularization for each consolidated task.
         params = self.params()
-        for task in self._tasks:
-            a = task['alpha']
-            ewc = ((p - t) ** 2 for t, p in zip(task['params'], params))
-            ewc = (f * e for f, e in zip(task['fisher'], ewc))
-            ewc = (a/2 * e for e in ewc)
-            ewc = (e.sum() for e in ewc)
-            j += sum(ewc)
+        a = self.ewc['alpha']
+        ewc = ((p - t) ** 2 for t, p in zip(self.ewc['params'], params))
+        ewc = (f * e for f, e in zip(self.ewc['fisher'], ewc))
+        ewc = (a/2 * e for e in ewc)
+        ewc = (e.sum() for e in ewc)
+        j += sum(ewc)
         return j
 
     def partial_fit(self, x, y):
