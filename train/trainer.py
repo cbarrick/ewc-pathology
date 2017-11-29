@@ -1,9 +1,13 @@
 import logging
 import sys
+from pathlib import Path
+
+import numpy as np
 
 import torch
 import torch.autograd as A
 import torch.nn.functional as F
+import torch.utils.data as D
 
 
 logger = logging.getLogger(__name__)
@@ -25,25 +29,52 @@ class EWCTrainer:
     (https://arxiv.org/abs/1612.00796)
     '''
 
-    def __init__(self, net, opt, loss, cuda=None, dry_run=False):
+    def __init__(self, net, opt, loss, name='model', cuda=None, dry_run=False):
         '''Create an EWC trainer to train a network on multiple tasks.
 
         Args:
             net: The network to train.
             opt: The optimizer to step during training.
             loss: The loss function to minimize.
+            name: A name for the model.
             cuda: The cuda device to use.
+            dry_run: Cut loops short.
         '''
         if cuda is not None:
             net = net.cuda(cuda)
 
         self.net = net
         self.opt = opt
+        self._loss = loss
+        self.name = name
         self.cuda = cuda
         self.dry_run = dry_run
+        self.reset()
 
-        self._loss = loss
+    def reset(self):
+        '''Reset the trainer to it's initial state.
+        '''
         self._tasks = []
+        self.net.reset()
+        return self
+
+    def save(self, path):
+        '''Saves the model parameters to disk.
+        '''
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state = self.net.state_dict()
+        torch.save(state, str(path))
+        return self
+
+    def load(self, path):
+        '''Loads the model parameters from disk.
+        '''
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state = torch.load(str(path))
+        self.net.load_state_dict(state)
+        return self
 
     def variable(self, x, **kwargs):
         '''Cast a tensor to a `Variable` on the same cuda device as the network.
@@ -88,23 +119,28 @@ class EWCTrainer:
         l = l.mean()
         l.backward()
         grads = (p.grad.data for p in self.params())
-        fisher = [(g ** 2).mean(0) for g in grads]
+        fisher = [(g ** 2) for g in grads]
         return fisher
 
-    def consolidate(self, data, alpha=1):
+    def consolidate(self, data, alpha=1, **kwargs):
         '''Consolidate the weights given a sample of the current task.
 
         This adds an EWC regularization term to the loss function.
 
         Args:
-            data: A `torch.DataLoader` of samples from the current task.
+            data: A dataset of samples from the current task.
             alpha: The regularization strength for this task.
+            **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
         '''
+        kwargs.setdefault('drop_last', True)
+        kwargs.setdefault('pin_memory', self.cuda is not None)
+        data = D.DataLoader(data, **kwargs)
+
         params = [p.clone() for p in self.params()]
         fisher = [torch.zeros(p.size()) for p in self.params()]
         fisher = [self.variable(f) for f in fisher]
 
-        n = len(data.dataset)
+        n = len(data)
         for x, y in data:
             for i, f in enumerate(self.fisher_information(x, y)):
                 fisher[i] += self.variable(f) / n
@@ -155,7 +191,7 @@ class EWCTrainer:
             y: The class labels.
 
         Returns:
-            Returns the sum of losses for this batch.
+            Returns the average loss for this batch.
         '''
         self.net.train()  # put the net in train mode, effects dropout layers etc.
         self.opt.zero_grad()  # reset the gradients of the trainable variables.
@@ -165,54 +201,66 @@ class EWCTrainer:
         j = self.loss(h, y)
         j.backward()
         self.opt.step()
-        return j.data.sum()
+        return j.data.mean()
 
-    def fit(self, train, validation=None, max_epochs=100, patience=5):
+    def fit(self, train, validation, max_epochs=100, patience=5, **kwargs):
         '''Fit the model to a dataset.
 
         Args:
-            train: A `torch.DataLoader` to fit.
-            validation: A `torch.DataLoader` to use as the validation set.
+            train: A dataset to fit.
+            validation: A dataset to use as the validation set.
             max_epochs: The maximum number of epochs to spend training.
             patience: Stop if the validation loss does not improve after this many epochs.
+            **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
 
         Returns:
             Returns the validation loss.
             Returns train loss if no validation set is given.
         '''
+        kwargs.setdefault('shuffle', True)
+        kwargs.setdefault('pin_memory', self.cuda is not None)
+        train = D.DataLoader(train, **kwargs)
+
         best_loss = float('inf')
+        best_params = None
         p = patience
+
         for epoch in range(max_epochs):
 
             # Train
+            n = len(train)
             train_loss = 0
             print(f'epoch {epoch+1} [0%]', end='\r', flush=True, file=sys.stderr)
             for i, (x, y) in enumerate(train):
                 j = self.partial_fit(x, y)
-                train_loss += j / len(train.dataset)
-                progress = (i+1) / len(train)
+                train_loss += j / n
+                progress = (i+1) / n
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=sys.stderr)
                 if self.dry_run:
                     break
             print(f'epoch {epoch+1} [Train loss: {train_loss:8.6f}]', end='')
 
             # Validate
-            if validation:
-                val_loss = self.test(validation)
-                print(f' [Validation loss: {val_loss:8.6f}]', end='')
+            val_loss = self.test(validation)
+            print(f' [Validation loss: {val_loss:8.6f}]', end='')
             print(flush=True)
 
             # Convergence test
-            loss = val_loss if validation else train_loss
-            if loss < best_loss:
-                best_loss = loss
+            if val_loss < best_loss:
+                best_loss = val_loss
                 p = patience
+                now = np.datetime64('now')
+                path = Path(f'./_parameters/{self.name}.{now}.torch')
+                logger.info(f'saving to {path}')
+                self.save(path)
+                best_params = path
             else:
                 p -= 1
                 if p == 0:
                     break
 
-        return loss
+        self.load(best_params)
+        return val_loss
 
     def predict(self, x):
         '''Predict the classes of some input batch.
@@ -227,7 +275,7 @@ class EWCTrainer:
         x = self.variable(x, volatile=True)  # use volatile input to save memory when not training.
         h = self.net(x)
         _, h = h.max(1)
-        return h
+        return h.data
 
     def score(self, x, y, criteria=None):
         '''Score the model on a batch of inputs and labels.
@@ -235,35 +283,44 @@ class EWCTrainer:
         Args:
             x: The input batch.
             y: The targets.
-            criteria: The metric to measure; defaults to the loss.
+            criteria: The metric to measure; defaults to the mean loss.
 
         Returns:
-            Returns the result of `criteria(true, predicted)`
+            Returns the result of `criteria(true, predicted)`.
         '''
         self.net.eval()
-        x = self.variable(x, volatile=True)
-        y = self.variable(y, volatile=True)
 
         if criteria is None:
+            x = self.variable(x, volatile=True)
+            y = self.variable(y, volatile=True)
             h = self.net(x)
             j = self.loss(h, y)
-            j = j.data.sum()
-        else:
-            h = self.predict(x)
-            h = h.data.cpu().numpy()
-            y = y.data.cpu().numpy()
-            j = criteria(y, h, labels=[0,1])
+            return j.data.mean()
 
-        return j
+        h = self.predict(x)
+        try:
+            return criteria(y, h, labels=[0,1])
+        except (ValueError, TypeError):
+            h = h.cpu().numpy()
+            y = y.cpu().numpy()
+            return criteria(y, h, labels=[0,1])
 
-    def test(self, data, criteria=None):
+    def test(self, data, criteria=None, **kwargs):
         '''Score the model on a dataset.
 
         Args:
-            data: A `torch.DataLoader` to score against.
+            data: A dataset to score against.
             criteria: The metric to measure; defaults to the loss.
+            **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
+
+        Returns:
+            Returns the result of `criteria(true, predicted)` averaged over all batches.
+            The last incomplete batch is dropped by default.
         '''
-        n = len(data.dataset)
+        kwargs.setdefault('drop_last', True)
+        kwargs.setdefault('pin_memory', self.cuda is not None)
+        data = D.DataLoader(data, **kwargs)
+        n = len(data)
         loss = 0
         for x, y in data:
             j = self.score(x, y, criteria)

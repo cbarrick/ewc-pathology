@@ -1,3 +1,4 @@
+import logging
 import re
 import tarfile
 from pathlib import Path
@@ -12,6 +13,9 @@ import torch
 import torch.utils.data
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_data(path='./data/epi', force_download=False):
     src = 'http://andrewjanowczyk.com/wp-static/epi.tgz'
     arc = Path('./epi.tgz')
@@ -20,7 +24,7 @@ def get_data(path='./data/epi', force_download=False):
     if dst.exists() and not force_download:
         return dst
 
-    print(f'downloading {src}')
+    logger.info(f'downloading {src}')
     r = requests.get(src, stream=True)
     with arc.open('wb') as fd:
         for chunk in r.iter_content(chunk_size=128):
@@ -125,6 +129,7 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
 
 
 def create_cv(path, k, n, **kwargs):
+    logger.debug('creating cross validation folds')
     data_dir = get_data(path)
     masks = sorted(data_dir.glob('masks/*_mask.png'))
     images = [data_dir / f'{m.stem[:-5]}.tif' for m in masks]
@@ -139,6 +144,12 @@ def create_cv(path, k, n, **kwargs):
         f = hash(meta['patient']) % k
         folds[f]['pos'].extend(pos)
         folds[f]['neg'].extend(neg)
+
+    for f in range(k):
+        fold = folds[f]
+        pos = len(fold['pos'])
+        neg = len(fold['neg'])
+        logger.debug(f'fold {f} has {pos}/{neg} positive/negative samples')
 
     return folds
 
@@ -164,13 +175,13 @@ class EpitheliumDataset(torch.utils.data.Dataset):
         return x, y
 
 
-class EpitheliumLoader:
+class EpitheliumSegmentation:
     def __init__(self, path='./data/epi', k=5, n=10000, **kwargs):
-        print('loading epithelium dataset...')
+        logger.info('loading epithelium dataset...')
         folds = create_cv(path, k, n, **kwargs)
         self.datasets = [EpitheliumDataset(f['pos'], f['neg']) for f in folds]
 
-    def load(self, fold, **kwargs):
+    def load(self, fold):
         k = len(self.datasets)
         assert 0 <= fold < k
 
@@ -178,9 +189,5 @@ class EpitheliumLoader:
         validation = self.datasets[(fold + 1) % k]
         train = [ds for ds in self.datasets if ds != test and ds != validation]
         train = torch.utils.data.ConcatDataset(train)
-
-        test = torch.utils.data.DataLoader(test, **kwargs)
-        validation = torch.utils.data.DataLoader(validation, **kwargs)
-        train = torch.utils.data.DataLoader(train, **kwargs)
 
         return train, validation, test
