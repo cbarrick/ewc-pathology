@@ -29,6 +29,7 @@ def main(
     batch_size=128,
     cuda=None,
     dry_run=False,
+    name='ewc',
     log_level='DEBUG',
 ):
     logging.basicConfig(
@@ -40,7 +41,7 @@ def main(
     net = AlexNet(2)
     opt = O.Adam(net.parameters())
     loss = N.CrossEntropyLoss()
-    model = EWCTrainer(net, opt, loss, cuda=cuda, dry_run=dry_run)
+    model = EWCTrainer(net, opt, loss, name=name, cuda=cuda, dry_run=dry_run)
 
     tasks = {
         'nuclei': NucleiSegmentation(n=data_size, k=n_folds),
@@ -93,5 +94,6 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--cuda', metavar='N', type=int, default=None, help='use the Nth cuda device')
     parser.add_argument('-d', '--dry-run', action='store_true', help='do a dry run to check for errors')
     parser.add_argument('-l', '--log-level', help='set the log level')
+    parser.add_argument('--name', type=str, default='ewc', help='sets a name for the experiment')
     args = parser.parse_args()
     main(**vars(args))
