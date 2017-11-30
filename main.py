@@ -14,8 +14,9 @@ import torch.optim as O
 
 from datasets import NucleiSegmentation
 from datasets import EpitheliumSegmentation
-from train import EWCTrainer
 from models import AlexNet
+from train import EWCTrainer
+from metrics import precision, recall, f_score
 
 
 logger = logging.getLogger()
@@ -52,10 +53,9 @@ def main(**kwargs):
     }
 
     metrics = {
-        'f-measure': sklearn.metrics.f1_score,
-        'precision': sklearn.metrics.precision_score,
-        'recal': sklearn.metrics.recall_score,
-        'log-loss': sklearn.metrics.log_loss,
+        'precision': precision,
+        'recall': recall,
+        'f-score': f_score,
     }
 
     data_args = {

@@ -40,7 +40,9 @@ class EWCTrainer:
             cuda: The cuda device to use.
             dry_run: Cut loops short.
         '''
-        if cuda is not None:
+        if cuda is None and torch.cuda.is_available():
+            cuda = 0
+        if cuda is not False:
             net = net.cuda(cuda)
 
         self.net = net
@@ -87,7 +89,19 @@ class EWCTrainer:
         '''
         if not isinstance(x, A.Variable):
             x = A.Variable(x, **kwargs)
-        if self.cuda is not None:
+        if self.cuda is not False:
+            x = x.cuda(self.cuda, async=True)
+        return x
+
+    def tensor(self, x):
+        '''Cast some `x` to a torch `Tensor` on the same cuda device as the network.
+
+        Args:
+            x: The input to cast
+        '''
+        if isinstance(x, A.Variable):
+            x = x.detach().data
+        if self.cuda is not False:
             x = x.cuda(self.cuda, async=True)
         return x
 
@@ -239,7 +253,7 @@ class EWCTrainer:
 
             # Validate
             if validation:
-                val_loss = self.test(validation)
+                val_loss = self.test(validation, **kwargs)
                 print(f' [Validation loss: {val_loss:8.6f}]', end='', flush=True)
             print()
 
@@ -296,13 +310,16 @@ class EWCTrainer:
             j = self.loss(h, y)
             return j.data.mean()
 
-        h = self.predict(x)
         try:
-            return criteria(y, h, labels=[0,1])
+            # Fast path - try to use the GPU
+            h = self.predict(x)
+            y = self.tensor(y)
+            return criteria(y, h)
         except (ValueError, TypeError):
+            # Slow path - most sklearn metrics cannot handle Tensors
             h = h.cpu().numpy()
             y = y.cpu().numpy()
-            return criteria(y, h, labels=[0,1])
+            return criteria(y, h)
 
     def test(self, data, criteria=None, **kwargs):
         '''Score the model on a dataset.
@@ -316,8 +333,8 @@ class EWCTrainer:
             Returns the result of `criteria(true, predicted)` averaged over all batches.
             The last incomplete batch is dropped by default.
         '''
-        kwargs.setdefault('drop_last', True)
         kwargs.setdefault('pin_memory', self.cuda is not None)
+        kwargs['drop_last'] = True
         data = D.DataLoader(data, **kwargs)
         n = len(data)
         loss = 0
