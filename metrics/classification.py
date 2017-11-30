@@ -26,13 +26,19 @@ def confusion(y, h, target=1, **kwargs):
 def precision(y, h, target=1, **kwargs):
     tp = true_positives(y, h, target=target, **kwargs)
     fp = false_positives(y, h, target=target, **kwargs)
-    return tp / (tp + fp)
+    try:
+        return tp / (tp + fp)
+    except ZeroDivisionError:
+        return 0
 
 
 def recall(y, h, target=1, **kwargs):
     tp = true_positives(y, h, target=target, **kwargs)
     fn = false_negatives(y, h, target=target, **kwargs)
-    return tp / (tp + fn)
+    try:
+        return tp / (tp + fn)
+    except ZeroDivisionError:
+        return 0
 
 
 def f_score(y, h, beta=1, target=1, **kwargs):
@@ -42,4 +48,7 @@ def f_score(y, h, beta=1, target=1, **kwargs):
     beta2 = beta ** 2
     tp2 = (1 + beta2) * tp
     fn2 = beta2 * fn
-    return tp2 / (tp2 + fn2 + fp)
+    try:
+        return tp2 / (tp2 + fn2 + fp)
+    except ZeroDivisionError:
+        return 0
