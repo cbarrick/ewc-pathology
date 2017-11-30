@@ -154,6 +154,16 @@ def create_cv(path, k, n, **kwargs):
     return folds
 
 
+def lazy_property(prop):
+    val = None
+    def wrapper(self):
+        nonlocal val
+        if val is None:
+            val = prop(self)
+        return val
+    return property(wrapper)
+
+
 class EpitheliumDataset(torch.utils.data.Dataset):
     def __init__(self, pos, neg):
         self._pos = pos
@@ -177,9 +187,10 @@ class EpitheliumDataset(torch.utils.data.Dataset):
 
 class EpitheliumSegmentation:
     def __init__(self, path='./data/epi', k=5, n=10000, **kwargs):
-        logger.info('loading epithelium dataset...')
-        folds = create_cv(path, k, n, **kwargs)
-        self.datasets = [EpitheliumDataset(f['pos'], f['neg']) for f in folds]
+        kwargs['path'] = path
+        kwargs['k'] = k
+        kwargs['n'] = n
+        self._args = kwargs
 
     def load(self, fold):
         k = len(self.datasets)
@@ -191,3 +202,10 @@ class EpitheliumSegmentation:
         train = torch.utils.data.ConcatDataset(train)
 
         return train, validation, test
+
+    @lazy_property
+    def datasets(self):
+        logger.info('loading epithelium dataset...')
+        folds = create_cv(**self._args)
+        datasets = [EpitheliumDataset(f['pos'], f['neg']) for f in folds]
+        return datasets

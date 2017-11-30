@@ -190,6 +190,16 @@ def create_cv(path, k, n, **kwargs):
     return folds
 
 
+def lazy_property(prop):
+    val = None
+    def wrapper(self):
+        nonlocal val
+        if val is None:
+            val = prop(self)
+        return val
+    return property(wrapper)
+
+
 class NucleiDataset(torch.utils.data.Dataset):
     '''A torch `Dataset` that combines positive and negative samples.
     '''
@@ -241,9 +251,10 @@ class NucleiSegmentation:
                 The dataset will contain `n * bg_ratio`
                 negative background patches per source image.
         '''
-        logger.info('loading nuclei dataset...')
-        folds = create_cv(path, k, n, **kwargs)
-        self.datasets = np.array([NucleiDataset(f['pos'], f['neg']) for f in folds])
+        kwargs['path'] = path
+        kwargs['k'] = k
+        kwargs['n'] = n
+        self._args = kwargs
 
     def load(self, fold):
         k = len(self.datasets)
@@ -255,3 +266,10 @@ class NucleiSegmentation:
         train = torch.utils.data.ConcatDataset(train)
 
         return train, validation, test
+
+    @lazy_property
+    def datasets(self):
+        logger.info('loading nuclei dataset...')
+        folds = create_cv(**self._args)
+        datasets = np.array([NucleiDataset(f['pos'], f['neg']) for f in folds])
+        return datasets
