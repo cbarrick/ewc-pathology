@@ -40,8 +40,8 @@ class EWCTrainer:
             cuda: The cuda device to use.
             dry_run: Cut loops short.
         '''
-        if cuda is None and torch.cuda.is_available():
-            cuda = 0
+        if cuda is None:
+            cuda = 0 if torch.cuda.is_available() else False
         if cuda is not False:
             net = net.cuda(cuda)
 
@@ -53,6 +53,10 @@ class EWCTrainer:
         self.dry_run = dry_run
         self.reset()
 
+        self.path = Path(f'./_parameters/{self.name}.torch')
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.touch()
+
     def reset(self):
         '''Reset the trainer to it's initial state.
         '''
@@ -60,20 +64,22 @@ class EWCTrainer:
         self.net.reset()
         return self
 
-    def save(self, path):
+    def save(self, path=None):
         '''Saves the model parameters to disk.
         '''
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        if path is None:
+            path = self.path
+        logger.info(f'saving {self.name} to {path}')
         state = self.net.state_dict()
         torch.save(state, str(path))
         return self
 
-    def load(self, path):
+    def load(self, path=None):
         '''Loads the model parameters from disk.
         '''
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        if path is None:
+            path = self.path
+        logger.info(f'restoring {self.name} from {path}')
         state = torch.load(str(path))
         self.net.load_state_dict(state)
         return self
@@ -147,7 +153,7 @@ class EWCTrainer:
             **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
         '''
         kwargs.setdefault('drop_last', True)
-        kwargs.setdefault('pin_memory', self.cuda is not None)
+        kwargs.setdefault('pin_memory', self.cuda is not False)
         data = D.DataLoader(data, **kwargs)
 
         params = [p.clone() for p in self.params()]
@@ -214,13 +220,13 @@ class EWCTrainer:
         self.opt.step()
         return j.data.mean()
 
-    def fit(self, train, validation=None, max_epochs=100, patience=5, **kwargs):
+    def fit(self, train, validation=None, epochs=100, patience=5, **kwargs):
         '''Fit the model to a dataset.
 
         Args:
             train: A dataset to fit.
             validation: A dataset to use as the validation set.
-            max_epochs: The maximum number of epochs to spend training.
+            epochs: The maximum number of epochs to spend training.
             patience: Stop if the validation loss does not improve after this many epochs.
             **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
 
@@ -229,14 +235,12 @@ class EWCTrainer:
             Returns train loss if no validation set is given.
         '''
         kwargs.setdefault('shuffle', True)
-        kwargs.setdefault('pin_memory', self.cuda is not None)
+        kwargs.setdefault('pin_memory', self.cuda is not False)
         train = D.DataLoader(train, **kwargs)
 
         best_loss = float('inf')
-        best_params = None
         p = patience
-
-        for epoch in range(max_epochs):
+        for epoch in range(epochs):
 
             # Train
             n = len(train)
@@ -262,17 +266,13 @@ class EWCTrainer:
                 if val_loss < best_loss:
                     best_loss = val_loss
                     p = patience
-                    now = np.datetime64('now')
-                    path = Path(f'./_parameters/{self.name}.{now}.torch')
-                    logger.info(f'saving to {path}')
-                    self.save(path)
-                    best_params = path
+                    self.save()
                 else:
                     p -= 1
                     if p == 0:
+                        self.load()
                         break
 
-        self.load(best_params)
         return val_loss
 
     def predict(self, x):
@@ -304,6 +304,7 @@ class EWCTrainer:
         self.net.eval()
 
         if criteria is None:
+            # Default - the loss has a different signature than a metric
             x = self.variable(x, volatile=True)
             y = self.variable(y, volatile=True)
             h = self.net(x)
@@ -315,8 +316,10 @@ class EWCTrainer:
             h = self.predict(x)
             y = self.tensor(y)
             return criteria(y, h)
+
         except (ValueError, TypeError):
             # Slow path - most sklearn metrics cannot handle Tensors
+            logger.debug('computing a slow metric')
             h = h.cpu().numpy()
             y = y.cpu().numpy()
             return criteria(y, h)
@@ -333,7 +336,7 @@ class EWCTrainer:
             Returns the result of `criteria(true, predicted)` averaged over all batches.
             The last incomplete batch is dropped by default.
         '''
-        kwargs.setdefault('pin_memory', self.cuda is not None)
+        kwargs.setdefault('pin_memory', self.cuda is not False)
         kwargs['drop_last'] = True
         data = D.DataLoader(data, **kwargs)
         n = len(data)

@@ -32,12 +32,12 @@ def main(**kwargs):
     kwargs.setdefault('cuda', None)
     kwargs.setdefault('dry_run', False)
     kwargs.setdefault('name', 'ewc')
-    kwargs.setdefault('log', 'DEBUG')
+    kwargs.setdefault('verbose', 'WARN')
     kwargs.setdefault('tasks', ['nuclei', 'epi'])
     args = SimpleNamespace(**kwargs)
 
     logging.basicConfig(
-        level=args.log,
+        level=args.verbose,
         style='{',
         format='[{levelname:.4}][{asctime}][{name}:{lineno}] {msg}',
     )
@@ -58,11 +58,6 @@ def main(**kwargs):
         'f-score': f_score,
     }
 
-    data_args = {
-        'batch_size': args.batch_size,
-        'pin_memory': args.cuda is not False,
-    }
-
     for f in range(args.folds):
         print(f'================================ Fold {f} ================================')
         model.reset()
@@ -71,8 +66,8 @@ def main(**kwargs):
             print(f'-------- Training on {task} --------')
             loader = datasets[task]
             train, validation, _ = loader.load(f)
-            model.fit(train, validation, max_epochs=args.epochs, patience=args.patience, **data_args)
-            model.consolidate(validation, alpha=args.ewc, **data_args)
+            model.fit(train, validation, epochs=args.epochs, patience=args.patience, batch_size=args.batch_size)
+            model.consolidate(validation, alpha=args.ewc, batch_size=args.batch_size)
             print()
 
         for task in args.tasks:
@@ -80,8 +75,9 @@ def main(**kwargs):
             loader = datasets[task]
             _, _, test = loader.load(f)
             for metric, criteria in metrics.items():
-                z = model.test(test, criteria, **data_args)
-                print(f'{metric}:', z)
+                print(metric, end=': ', flush=True)
+                z = model.test(test, criteria, batch_size=args.batch_size)
+                print(z)
             print()
 
         if args.dry_run:
