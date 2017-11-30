@@ -258,8 +258,8 @@ class EWCTrainer:
             # Validate
             if validation:
                 val_loss = self.test(validation, **kwargs)
-                print(f' [Validation loss: {val_loss:8.6f}]', end='', flush=True)
-            print()
+                print(f' [Validation loss: {val_loss:8.6f}]', end='')
+            print(flush=True)
 
             # Early stopping
             if validation:
