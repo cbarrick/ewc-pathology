@@ -25,20 +25,32 @@ class EWCTrainer:
     original values. Once we have trained on the second task, we can then
     consolidate the weights again before training on a new task.
 
-    See the paper "Overcoming catastrophic forgetting in neural networks"
-    (https://arxiv.org/abs/1612.00796)
+    References:
+        "Overcoming catastrophic forgetting in neural networks" https://arxiv.org/abs/1612.00796
     '''
 
     def __init__(self, net, opt, loss, name='model', cuda=None, dry_run=False):
         '''Create an EWC trainer to train a network on multiple tasks.
 
         Args:
-            net: The network to train.
-            opt: The optimizer to step during training.
-            loss: The loss function to minimize.
-            name: A name for the model.
-            cuda: The cuda device to use.
-            dry_run: Cut loops short.
+            net (torch.nn.Module):
+                The network to train.
+                In addition to being a torch `Module`, the network must also
+                expose a `reset` method to (re)initialize the weights.
+            opt (torch.optim.Optimizer):
+                The optimizer to step during training.
+            loss (fn: predicted, true -> loss):
+                The loss function to minimize.
+                The inputs and output are torch `Variable`s.
+            name:
+                A name for the model.
+                This affects logs and file names.
+            cuda:
+                The cuda device to use.
+                The default is device 0 if cuda is available.
+                Set to `False` to disable cuda completely.
+            dry_run:
+                Cut loops short.
         '''
         if cuda is None:
             cuda = 0 if torch.cuda.is_available() else False
@@ -59,6 +71,9 @@ class EWCTrainer:
 
     def reset(self):
         '''Reset the trainer to it's initial state.
+
+        Returns:
+            Returns `self` for method chaining.
         '''
         self.ewc = None
         self.net.reset()
@@ -66,6 +81,9 @@ class EWCTrainer:
 
     def save(self, path=None):
         '''Saves the model parameters to disk.
+
+        Returns:
+            Returns `self` for method chaining.
         '''
         if path is None:
             path = self.path
@@ -76,6 +94,9 @@ class EWCTrainer:
 
     def load(self, path=None):
         '''Loads the model parameters from disk.
+
+        Returns:
+            Returns `self` for method chaining.
         '''
         if path is None:
             path = self.path
@@ -85,13 +106,15 @@ class EWCTrainer:
         return self
 
     def variable(self, x, **kwargs):
-        '''Cast a tensor to a `Variable` on the same cuda device as the network.
+        '''Cast `x` to a torch `Variable` on the same cuda device as the network.
 
-        If the input is already a `Variable`, it is not wrapped.
+        If `x` is already a `Variable`, it is not wrapped.
 
         Args:
-            x: The tensor to wrap.
-            **kwargs: Passed to the `Variable` constructor.
+            x:
+                The value to cast.
+            **kwargs:
+                Passed to the `Variable` constructor.
         '''
         if not isinstance(x, A.Variable):
             x = A.Variable(x, **kwargs)
@@ -99,14 +122,24 @@ class EWCTrainer:
             x = x.cuda(self.cuda, async=True)
         return x
 
-    def tensor(self, x):
-        '''Cast some `x` to a torch `Tensor` on the same cuda device as the network.
+    def tensor(self, x, **kwargs):
+        '''Cast `x` to a torch `Tensor` on the same cuda device as the network.
+
+        If `x` is a `Variable`, it is detached from the current graph and
+        it's `data` attribute is returned. Otherwise `x` is passed to the
+        `Tensor` constructor.
 
         Args:
-            x: The input to cast
+            x:
+                The value to cast.
+            **kwargs:
+                Passed to the `Tensor` constructor.
+                As of PyTorch 0.2.0, no kwargs are accepted.
         '''
         if isinstance(x, A.Variable):
             x = x.detach().data
+        else:
+            x = torch.Tensor(x, **kwargs)
         if self.cuda is not False:
             x = x.cuda(self.cuda, async=True)
         return x
@@ -120,14 +153,14 @@ class EWCTrainer:
         return [p for group in self.opt.param_groups for p in group['params']]
 
     def fisher_information(self, x, y):
-        '''Compute the Fisher information of the trainable parameters.
+        '''Estimate the Fisher information of the trainable parameters.
 
         Args:
-            x: A batch of inputs.
-            y: A batch of labels.
+            x: Some input samples.
+            y: Some class labels.
 
         Returns:
-            Returns the fisher information of the trainable parameter.
+            Returns the fisher information of the trainable parameters.
             The values are arranged similarly to `EWCTrainer.params()`.
         '''
         self.net.eval()
@@ -148,12 +181,16 @@ class EWCTrainer:
         This adds an EWC regularization term to the loss function.
 
         Args:
-            data: A dataset of samples from the current task.
-            alpha: The regularization strength for this task.
-            **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
+            data:
+                A dataset of samples from the current task.
+                This is typically the validation set.
+            alpha:
+                The regularization strength for this task.
+            **kwargs:
+                Forwarded to torch's `DataLoader` class, with more sensible defaults.
         '''
-        kwargs.setdefault('drop_last', True)
         kwargs.setdefault('pin_memory', self.cuda is not False)
+        kwargs['drop_last'] = True
         data = D.DataLoader(data, **kwargs)
 
         params = [p.clone() for p in self.params()]
@@ -174,15 +211,14 @@ class EWCTrainer:
         }
 
     def loss(self, h, y):
-        '''Compute the EWC loss between hypotheses and true label.
+        '''Compute the EWC loss between predictions and their true labels.
 
         Args:
-            h: A batch of hypotheses.
-            y: A batch of true labels.
+            h: The predicted labels.
+            y: The true labels.
 
         Returns:
-            Returns the base loss function plus
-            EWC regularization terms for each task.
+            Returns the base loss plus EWC regularization.
         '''
         j = self._loss(h, y)
 
@@ -204,7 +240,7 @@ class EWCTrainer:
         '''Performs one step of the optimization.
 
         Args:
-            x: The input batch.
+            x: The input samples.
             y: The class labels.
 
         Returns:
@@ -224,15 +260,22 @@ class EWCTrainer:
         '''Fit the model to a dataset.
 
         Args:
-            train: A dataset to fit.
-            validation: A dataset to use as the validation set.
-            epochs: The maximum number of epochs to spend training.
-            patience: Stop if the validation loss does not improve after this many epochs.
-            **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
+            train:
+                A dataset to fit.
+            validation:
+                A dataset to use as validation.
+            epochs:
+                The maximum number of epochs to spend training.
+            patience:
+                Stop if the loss does not improve after this many epochs,
+                using the validation loss if possible and the train loss otherwise.
+                Set to None or 0 to disable early stopping.
+            **kwargs:
+                Forwarded to torch's `DataLoader` class, with more sensible defaults.
 
         Returns:
-            Returns the validation loss.
-            Returns train loss if no validation set is given.
+            Returns the validation loss if possible,
+            otherwise returns the train loss.
         '''
         kwargs.setdefault('shuffle', True)
         kwargs.setdefault('pin_memory', self.cuda is not False)
@@ -280,7 +323,7 @@ class EWCTrainer:
         '''Predict the classes of some input batch.
 
         Args:
-            x: The input batch.
+            x: The input samples.
 
         Returns:
             A tensor of predicted classes for each row of the input.
@@ -295,8 +338,8 @@ class EWCTrainer:
         '''Score the model on a batch of inputs and labels.
 
         Args:
-            x: The input batch.
-            y: The targets.
+            x: The input samples.
+            y: The class labels.
             criteria: The metric to measure; defaults to the mean loss.
 
         Returns:
@@ -329,9 +372,13 @@ class EWCTrainer:
         '''Score the model on a dataset.
 
         Args:
-            data: A dataset to score against.
-            criteria: The metric to measure; defaults to the loss.
-            **kwargs: Forwarded to torch's `DataLoader` class, with more sensible defaults.
+            data:
+                A dataset to score against.
+            criteria:
+                The metric to measure.
+                Defaults to the mean loss.
+            **kwargs:
+                Forwarded to torch's `DataLoader` class, with more sensible defaults.
 
         Returns:
             Returns the result of `criteria(true, predicted)` averaged over all batches.
