@@ -26,7 +26,7 @@ def main(**kwargs):
     kwargs.setdefault('data_size', 10000)
     kwargs.setdefault('folds', 5)
     kwargs.setdefault('epochs', 100)
-    kwargs.setdefault('patience', 50)
+    kwargs.setdefault('patience', None)
     kwargs.setdefault('ewc', 1)
     kwargs.setdefault('batch_size', 128)
     kwargs.setdefault('cuda', None)

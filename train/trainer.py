@@ -256,7 +256,7 @@ class EWCTrainer:
         self.opt.step()
         return j.data.mean()
 
-    def fit(self, train, validation=None, epochs=100, patience=50, **kwargs):
+    def fit(self, train, validation=None, epochs=100, patience=None, **kwargs):
         '''Fit the model to a dataset.
 
         Args:
@@ -269,7 +269,7 @@ class EWCTrainer:
             patience:
                 Stop if the loss does not improve after this many epochs,
                 using the validation loss if possible and the train loss otherwise.
-                Set to None or 0 to disable early stopping.
+                Set to None to disable early stopping.
             **kwargs:
                 Forwarded to torch's `DataLoader` class, with more sensible defaults.
 
