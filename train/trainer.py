@@ -253,12 +253,13 @@ class EWCTrainer:
                 print(f'epoch {epoch+1} [{progress:.2%}]', end='\r', flush=True, file=sys.stderr)
                 if self.dry_run:
                     break
-            print(f'epoch {epoch+1} [Train loss: {train_loss:8.6f}]', end='', flush=True)
+            print(f'epoch {epoch+1}', end=' ', flush=True)
+            print(f'[Train loss: {train_loss:8.6f}]', end=' ', flush=True)
 
             # Validate
             if validation:
                 val_loss = self.test(validation, **kwargs)
-                print(f' [Validation loss: {val_loss:8.6f}]', end='')
+                print(f'[Validation loss: {val_loss:8.6f}]', end=' ', flush=True)
             print(flush=True)
 
             # Early stopping
