@@ -314,9 +314,9 @@ class EWCTrainer:
             else:
                 p -= 1
             if p == 0:
-                self.load()
                 break
 
+        self.load()
         return loss
 
     def predict(self, x):
