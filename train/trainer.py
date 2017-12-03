@@ -239,7 +239,7 @@ class EWCTrainer:
         train = D.DataLoader(train, **kwargs)
 
         best_loss = float('inf')
-        p = patience
+        p = patience or -1
         for epoch in range(epochs):
 
             # Train
@@ -262,18 +262,18 @@ class EWCTrainer:
             print(flush=True)
 
             # Early stopping
-            if validation:
-                if val_loss < best_loss:
-                    best_loss = val_loss
-                    p = patience
-                    self.save()
-                else:
-                    p -= 1
-                    if p == 0:
-                        self.load()
-                        break
+            loss = val_loss if validation else train_loss
+            if loss < best_loss:
+                best_loss = loss
+                p = patience or -1
+                self.save()
+            else:
+                p -= 1
+            if p == 0:
+                self.load()
+                break
 
-        return val_loss
+        return loss
 
     def predict(self, x):
         '''Predict the classes of some input batch.
