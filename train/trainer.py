@@ -220,7 +220,7 @@ class EWCTrainer:
         self.opt.step()
         return j.data.mean()
 
-    def fit(self, train, validation=None, epochs=100, patience=5, **kwargs):
+    def fit(self, train, validation=None, epochs=100, patience=50, **kwargs):
         '''Fit the model to a dataset.
 
         Args:
