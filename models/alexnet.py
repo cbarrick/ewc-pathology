@@ -58,12 +58,12 @@ class AlexNet(N.Module):
             N.Conv2d(3, 32, kernel_size=5, stride=1, padding=2),
             N.MaxPool2d(kernel_size=3, stride=2, padding=1),
             N.ReLU(inplace=True),
-            LRN(3, alpha=5e-5, beta=0.75, cross_channel=False),
+            # LRN(3, alpha=5e-5, beta=0.75, cross_channel=False),
 
             N.Conv2d(32, 32, kernel_size=5, stride=1, padding=2),
             N.ReLU(inplace=True),
             N.AvgPool2d(kernel_size=3, stride=2, padding=1),
-            LRN(3, alpha=5e-5, beta=0.75, cross_channel=False),
+            # LRN(3, alpha=5e-5, beta=0.75, cross_channel=False),
 
             N.Conv2d(32, 64, kernel_size=5, stride=1, padding=2),
             N.ReLU(inplace=True),
