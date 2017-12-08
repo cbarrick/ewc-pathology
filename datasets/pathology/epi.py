@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_data(path='./data/epi', force_download=False):
+    '''Download the data and return a Path to the directory.
+    '''
     src = 'http://andrewjanowczyk.com/wp-static/epi.tgz'
     arc = Path('./epi.tgz')
     dst = Path(path)
@@ -36,7 +38,8 @@ def get_data(path='./data/epi', force_download=False):
 
 
 def get_metadata(image_path):
-    '''Get the metadata for an image given its path.'''
+    '''Get the metadata for an image given its path.
+    '''
     image_path = str(image_path)
     match = re.search('([0-9]+)_([0-9]+)', image_path)
     return {
@@ -47,6 +50,11 @@ def get_metadata(image_path):
 
 
 def imread(path, mask=False):
+    '''Open an image as a numpy array.
+
+    Masks are opened as binary images with shape (N x M).
+    Otherwise, images are opened as float RGB with shape (N x M x 3).
+    '''
     path = str(path)
     if mask:
         image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -59,12 +67,16 @@ def imread(path, mask=False):
 
 
 def background_mask(mask_p):
+    '''Create a mask separating the background from the foreground.
+    '''
     mask_b = np.logical_not(mask_p)
     return mask_b
 
 
-def edge_mask(mask_p):
-    k = np.ones((5,5))
+def edge_mask(mask_p, size=5):
+    '''Creates a mask around the outer edges of the positive class.
+    '''
+    k = np.ones((size, size))
     mask_p = mask_p.astype('uint8')
     edges = cv2.dilate(mask_p, k)
     edges = edges - mask_p
@@ -72,7 +84,9 @@ def edge_mask(mask_p):
     return mask_e
 
 
-def extract_from_mask(image, mask, max_count=None, size=64, random=True):
+def extract_from_mask(image, mask, size, max_count=None, random=True):
+    '''Sample patches from an image whose centers are not masked.
+    '''
     ar = np.require(image) # no copy
     mask = np.array(mask)  # copy
     width, height = mask.shape
@@ -105,7 +119,12 @@ def extract_from_mask(image, mask, max_count=None, size=64, random=True):
         yield patch
 
 
-def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
+def extract_patches(image, mask_p, size=32, n=500, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
+    '''Samples labeled patches from an image given a positive mask.
+
+    The negative class is sampled from an edge mask and a background mask,
+    which are generated from the input image and positive mask.
+    '''
     # generate the masks
     image = np.require(image)
     mask_p = np.require(mask_p)
@@ -113,9 +132,9 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     mask_b = background_mask(mask_p)
 
     # get patches for each mask
-    p = list(extract_from_mask(image, mask_p, int(n * pos_ratio), random=True))
-    e = list(extract_from_mask(image, mask_e, int(n * edge_ratio), random=True))
-    b = list(extract_from_mask(image, mask_b, int(n * bg_ratio), random=True))
+    p = list(extract_from_mask(image, mask_p, size, int(n * pos_ratio), random=True))
+    e = list(extract_from_mask(image, mask_e, size, int(n * edge_ratio), random=True))
+    b = list(extract_from_mask(image, mask_b, size, int(n * bg_ratio), random=True))
 
     # separate into positive and negative classes
     pos = p
@@ -128,7 +147,13 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     return pos, neg
 
 
-def create_cv(path, k, n, **kwargs):
+def create_cv(path='./data/epi', k=5, **kwargs):
+    '''Extract a training set of patches taken from all images in a directory.
+
+    The dataset is folded for cross-validation by patient id.
+
+    Kwargs are passed to `extract_patches`.
+    '''
     logger.debug('creating cross validation folds')
     data_dir = get_data(path)
     masks = sorted(data_dir.glob('masks/*_mask.png'))
@@ -140,7 +165,7 @@ def create_cv(path, k, n, **kwargs):
         image = imread(image_path)
         mask_p = imread(mask_path, mask=True)
         meta = get_metadata(image_path)
-        pos, neg = extract_patches(image, mask_p, n, **kwargs)
+        pos, neg = extract_patches(image, mask_p, **kwargs)
         f = hash(meta['patient']) % k
         folds[f]['pos'].extend(pos)
         folds[f]['neg'].extend(neg)
@@ -155,6 +180,8 @@ def create_cv(path, k, n, **kwargs):
 
 
 def lazy_property(prop):
+    '''A lazy, memoized version of the builtin `property` decorator.
+    '''
     val = None
     def wrapper(self):
         nonlocal val
@@ -164,7 +191,10 @@ def lazy_property(prop):
     return property(wrapper)
 
 
-class EpitheliumDataset(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset):
+    '''A torch `Dataset` that combines positive and negative samples.
+    '''
+
     def __init__(self, pos, neg):
         self._pos = pos
         self._neg = neg
@@ -186,13 +216,49 @@ class EpitheliumDataset(torch.utils.data.Dataset):
 
 
 class EpitheliumSegmentation:
-    def __init__(self, path='./data/epi', k=5, n=10000, **kwargs):
-        kwargs['path'] = path
-        kwargs['k'] = k
-        kwargs['n'] = n
+    '''A cross-validation loader for the epithelium segmentation dataset.
+    '''
+
+    def __init__(self, **kwargs):
+        '''Create a dataloader.
+
+        Kwargs:
+            path (str):
+                The path to the dataset.
+            k (int):
+                The number of cross-validation folds.
+            n (int):
+                A parameter to determine the number of
+                patches drawn from each source image.
+            size (int, default=128):
+                The size of the image patches.
+            pos_ratio (default=1):
+                The dataset will contain `n * pos_ratio`
+                positive patches per source image.
+            edge_ratio (default=1):
+                The dataset will contain `n * edge_ratio`
+                negative edge patches per source image.
+            bg_ratio (default=0.3):
+                The dataset will contain `n * bg_ratio`
+                negative background patches per source image.
+        '''
         self._args = kwargs
 
+    @lazy_property
+    def datasets(self):
+        '''The list of datasets, one for each fold.
+        '''
+        logger.info('loading epithelium dataset...')
+        folds = create_cv(**self._args)
+        datasets = np.array([Dataset(f['pos'], f['neg']) for f in folds])
+        return datasets
+
     def load(self, fold):
+        '''Get the datasets for a given fold.
+
+        Returns:
+            Returns three datasets: train, validation, and test
+        '''
         k = len(self.datasets)
         assert 0 <= fold < k
 
@@ -202,10 +268,3 @@ class EpitheliumSegmentation:
         train = torch.utils.data.ConcatDataset(train)
 
         return train, validation, test
-
-    @lazy_property
-    def datasets(self):
-        logger.info('loading epithelium dataset...')
-        folds = create_cv(**self._args)
-        datasets = [EpitheliumDataset(f['pos'], f['neg']) for f in folds]
-        return datasets

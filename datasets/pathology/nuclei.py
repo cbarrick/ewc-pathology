@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_data(path='./data/nuclei', force_download=False):
-    '''Download the data and return a Path to the directory.'''
+    '''Download the data and return a Path to the directory.
+    '''
     src = 'http://andrewjanowczyk.com/wp-static/nuclei.tgz'
     arc = Path('./nuclei.tgz')
     dst = Path(path)
@@ -34,6 +35,19 @@ def get_data(path='./data/nuclei', force_download=False):
     tarfile.open(arc).extractall(dst)
     arc.unlink()
     return dst
+
+
+def get_metadata(image_path):
+    ''''Get the metadata for an image given its path.
+    '''
+    image_path = str(image_path)
+    match = re.search('([0-9]+)_([0-9]+)_([0-9a-f]+)_', image_path)
+    return {
+        'id': match[3],
+        'type': match[2],
+        'patient': match[1],
+        'path': image_path,
+    }
 
 
 def imread(path, mask=False):
@@ -67,10 +81,10 @@ def background_mask(image):
     return mask_b
 
 
-def edge_mask(mask_p):
+def edge_mask(mask_p, dilation=5):
     '''Creates a mask around the outer edges of the positive class.
     '''
-    k = np.ones((5,5))
+    k = np.ones((dilation, dilation))
     mask_p = mask_p.astype('uint8')
     edges = cv2.dilate(mask_p, k)
     edges = edges - mask_p
@@ -78,7 +92,7 @@ def edge_mask(mask_p):
     return mask_e
 
 
-def extract_from_mask(image, mask, max_count=None, size=64, random=True):
+def extract_from_mask(image, mask, size, max_count=500, random=True):
     '''Sample patches from an image whose centers are not masked.
     '''
     ar = np.require(image) # no copy
@@ -113,7 +127,7 @@ def extract_from_mask(image, mask, max_count=None, size=64, random=True):
         yield patch
 
 
-def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
+def extract_patches(image, mask_p, size=32, n=500, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     '''Samples labeled patches from an image given a positive mask.
 
     The negative class is sampled from an edge mask and a background mask,
@@ -126,9 +140,9 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     mask_b = background_mask(image)
 
     # get patches for each mask
-    p = list(extract_from_mask(image, mask_p, int(n * pos_ratio), random=True))
-    e = list(extract_from_mask(image, mask_e, int(n * edge_ratio), random=True))
-    b = list(extract_from_mask(image, mask_b, int(n * bg_ratio), random=True))
+    p = list(extract_from_mask(image, mask_p, size, int(n * pos_ratio), random=True))
+    e = list(extract_from_mask(image, mask_e, size, int(n * edge_ratio), random=True))
+    b = list(extract_from_mask(image, mask_b, size, int(n * bg_ratio), random=True))
 
     # separate into positive and negative classes
     pos = p
@@ -141,20 +155,7 @@ def extract_patches(image, mask_p, n, pos_ratio=1, edge_ratio=1, bg_ratio=0.3):
     return pos, neg
 
 
-def get_metadata(image_path):
-    '''Extracts the metadata from a file name.
-    '''
-    image_path = str(image_path)
-    match = re.search('([0-9]+)_([0-9]+)_([0-9a-f]+)_', image_path)
-    return {
-        'id': match[3],
-        'type': match[2],
-        'patient': match[1],
-        'path': image_path,
-    }
-
-
-def create_cv(path, k, n, **kwargs):
+def create_cv(path='./data/nuclei', k=5, **kwargs):
     '''Extract a training set of patches taken from all images in a directory.
 
     The dataset is folded for cross-validation by patient id.
@@ -176,7 +177,7 @@ def create_cv(path, k, n, **kwargs):
         image = imread(image_path)
         mask_p = imread(mask_path, mask=True)
         meta = get_metadata(image_path)
-        pos, neg = extract_patches(image, mask_p, n, **kwargs)
+        pos, neg = extract_patches(image, mask_p, **kwargs)
         f = hash(meta['patient']) % k
         folds[f]['pos'].extend(pos)
         folds[f]['neg'].extend(neg)
@@ -191,6 +192,8 @@ def create_cv(path, k, n, **kwargs):
 
 
 def lazy_property(prop):
+    '''A lazy, memoized version of the builtin `property` decorator.
+    '''
     val = None
     def wrapper(self):
         nonlocal val
@@ -200,9 +203,10 @@ def lazy_property(prop):
     return property(wrapper)
 
 
-class NucleiDataset(torch.utils.data.Dataset):
+class Dataset(torch.utils.data.Dataset):
     '''A torch `Dataset` that combines positive and negative samples.
     '''
+
     def __init__(self, pos, neg):
         self._pos = pos
         self._neg = neg
@@ -224,12 +228,13 @@ class NucleiDataset(torch.utils.data.Dataset):
 
 
 class NucleiSegmentation:
-    '''A dataloader for the nuclei segmentation dataset.
+    '''A cross-validation loader for the nuclei segmentation dataset.
     '''
-    def __init__(self, path='./data/nuclei', k=5, n=10000, **kwargs):
+
+    def __init__(self, **kwargs):
         '''Create a dataloader.
 
-        Args:
+        Kwargs:
             path (str):
                 The path to the dataset.
             k (int):
@@ -237,9 +242,7 @@ class NucleiSegmentation:
             n (int):
                 A parameter to determine the number of
                 patches drawn from each source image.
-
-        Kwargs:
-            size (int, default=64):
+            size (int, default=32):
                 The size of the image patches.
             pos_ratio (default=1):
                 The dataset will contain `n * pos_ratio`
@@ -251,12 +254,23 @@ class NucleiSegmentation:
                 The dataset will contain `n * bg_ratio`
                 negative background patches per source image.
         '''
-        kwargs['path'] = path
-        kwargs['k'] = k
-        kwargs['n'] = n
         self._args = kwargs
 
+    @lazy_property
+    def datasets(self):
+        '''The list of datasets, one for each fold.
+        '''
+        logger.info('loading nuclei dataset...')
+        folds = create_cv(**self._args)
+        datasets = np.array([Dataset(f['pos'], f['neg']) for f in folds])
+        return datasets
+
     def load(self, fold):
+        '''Get the datasets for a given fold.
+
+        Returns:
+            Returns three datasets: train, validation, and test
+        '''
         k = len(self.datasets)
         assert 0 <= fold < k
 
@@ -266,10 +280,3 @@ class NucleiSegmentation:
         train = torch.utils.data.ConcatDataset(train)
 
         return train, validation, test
-
-    @lazy_property
-    def datasets(self):
-        logger.info('loading nuclei dataset...')
-        folds = create_cv(**self._args)
-        datasets = np.array([NucleiDataset(f['pos'], f['neg']) for f in folds])
-        return datasets
