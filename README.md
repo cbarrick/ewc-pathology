@@ -26,8 +26,8 @@ usage: pathology.py [-n X] [-k X] [-e X] [-l X] [-p X] [-w X] [-b X] [-c X]
 Runs an experiment.
 
 Tasks are specified with either a plus (+) or a minus (-) followed by the
-name of a dataset. Tasks begining with a plus fit the model to the dataset,
-while tasks begining with a minus test the model against a dataset.
+name of a dataset. Tasks beginning with a plus fit the model to the dataset,
+while tasks beginning with a minus test the model against a dataset.
 
 For example, the default task list of `+nuclei -nuclei` will first fit the
 model to the nuclei dataset, then test against against the nuclei dataset.
