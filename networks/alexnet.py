@@ -73,31 +73,29 @@ class AlexNet(N.Module):
             N.AvgPool2d(kernel_size=3, stride=2, padding=1),
         )
 
-        # Janowczyk and Madabhushi do NOT have an activation between the linear
-        # layers. This is clearly a bug, since two linear layers reduce to a
-        # single layer. The dropout version of the network _does_ have ReLUs
-        # after _both_ layers. In that case, the final ReLU seems odd.
+        # The Caffe version of the network uses a single linear layer without
+        # activation. Janowczyk and Madabhushi use two linear layers, where the
+        # first outputs a 64-vector. In their dropout network, _both_ layers
+        # are followed by dropout and ReLU activation (it seems odd to activate
+        # the final layer...). In the non-dropout network, they remove the
+        # dropout _and_ activation. This is clearly a bug, since two linear
+        # layers reduce to a single linear layer.
         n = int(np.ceil(shape[1] / 2 / 2 / 2))
         m = int(np.ceil(shape[2] / 2 / 2 / 2))
         self.classifier = N.Sequential(
             N.Linear(64*n*m, 64),
+            N.ReLU(inplace=True),
             N.Linear(64, num_classes),
         )
 
         self.reset()
 
     def reset(self):
-        # The initialization scheme is taken from Janowczyk and Madabhushi.
-        self.features[0].weight.data.normal_(std=0.001)
-        self.features[0].bias.data.zero_()
-        self.features[3].weight.data.normal_(std=0.01)
-        self.features[3].bias.data.zero_()
-        self.features[6].weight.data.normal_(std=0.01)
-        self.features[6].bias.data.zero_()
-        self.classifier[0].weight.data.normal_(std=0.1)
-        self.classifier[0].bias.data.zero_()
-        self.classifier[1].weight.data.normal_(std=0.1)
-        self.classifier[1].bias.data.zero_()
+        # Apply Kaiming initialization to conv and linear layers
+         for m in self.modules():
+            if isinstance(m, (N.Conv2d, N.Linear)):
+                N.init.kaiming_uniform(m.weight)
+                N.init.constant(m.bias, 0)
 
     def forward(self, x):
         x = self.features(x)
