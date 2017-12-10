@@ -10,10 +10,8 @@ This experiment implements [elastic weight consolidation][ewc] to train a single
 The experiment can be executed by running the `experiments.pathology` module from the root of this repository:
 
 ```
-python -m experiments.pathology
+python -m experiments.pathology -e100 -n1000 -w25 -- +nuclei -nuclei +epi -epi -nuclei
 ```
-
-**TODO:** Document the exact command which generates the reported results.
 
 The experiment accepts a number of parameters. Here is the full help output:
 
